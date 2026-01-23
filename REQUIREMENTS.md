@@ -26,6 +26,12 @@
   sudo apt-get install -y curl
   ```
 
+- **dnsutils** (dig/nslookup) - Required for `playbooks/system/dns_test.yml`
+  ```bash
+  sudo apt-get install -y dnsutils
+  ```
+  Note: On RHEL/CentOS, use: `sudo yum install -y bind-utils`
+
 - **Cisco Network Collections** - Required for Cisco playbooks
   ```bash
   ansible-galaxy collection install cisco.ios
@@ -150,6 +156,16 @@ sudo pip3 install --break-system-packages ansible
 **Solution:**
 ```bash
 sudo apt-get install -y curl
+```
+
+### Issue: "dig: command not found" or "nslookup: command not found"
+**Solution:**
+```bash
+# Debian/Ubuntu
+sudo apt-get install -y dnsutils
+
+# RHEL/CentOS
+sudo yum install -y bind-utils
 ```
 
 ### Issue: "Permission denied" on actionlog

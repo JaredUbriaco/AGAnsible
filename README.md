@@ -37,6 +37,22 @@ This repository contains a well-organized Ansible setup with:
 - pip3 (installed automatically)
 - Ansible (installed via setup script)
 
+### Optional Software (for specific playbooks)
+- **curl** - For `playbooks/system/curl_test.yml`
+- **dnsutils** - For `playbooks/system/dns_test.yml`
+
+Install optional tools:
+```bash
+chmod +x install_optional_tools.sh
+./install_optional_tools.sh
+```
+
+Or install individually:
+```bash
+sudo apt-get install -y curl      # For curl tests
+sudo apt-get install -y dnsutils  # For DNS tests
+```
+
 ## 🚀 Installation
 
 ### Step 1: Clone or Download Repository

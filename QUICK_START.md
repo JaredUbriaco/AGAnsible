@@ -10,10 +10,15 @@ cd /path/to/ansible
 chmod +x install.sh
 ./install.sh
 
+# 3. (Optional) Install tools for system playbooks
+chmod +x install_optional_tools.sh
+./install_optional_tools.sh
+
 # Or install manually:
 sudo apt-get update
 sudo apt-get install -y python3 python3-pip python3-apt
 sudo pip3 install --break-system-packages ansible
+sudo apt-get install -y curl dnsutils  # Optional: for system playbooks
 ```
 
 ## Running Tests
