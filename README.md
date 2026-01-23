@@ -112,7 +112,8 @@ ansible/
 │   ├── cisco/                  # Cisco-specific playbooks
 │   │   └── ssh_test.yml       # SSH connectivity test
 │   └── system/                 # System-level tests
-│       └── curl_test.yml      # HTTP/curl test
+│       ├── curl_test.yml      # HTTP/curl test
+│       └── dns_test.yml       # DNS resolution test
 │
 ├── roles/                       # Reusable Ansible roles
 ├── group_vars/                  # Variables for inventory groups
@@ -124,7 +125,8 @@ ansible/
     ├── cisco/
     │   └── ssh_test/           # SSH test results
     └── system/
-        └── curl_test/          # Curl test results
+        ├── curl_test/          # Curl test results
+        └── dns_test/           # DNS test results
 ```
 
 ## 🔺 The Trinity of Ansible
@@ -175,6 +177,11 @@ ansible-playbook playbooks/base/ping_test.yml
 ### Run a Curl Test (System)
 ```bash
 ansible-playbook playbooks/system/curl_test.yml
+```
+
+### Run a DNS Test (System)
+```bash
+ansible-playbook playbooks/system/dns_test.yml
 ```
 
 ### Run SSH Test (Cisco - requires device)

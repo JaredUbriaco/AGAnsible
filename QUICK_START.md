@@ -28,6 +28,11 @@ ansible-playbook playbooks/base/ping_test.yml
 ansible-playbook playbooks/system/curl_test.yml
 ```
 
+### DNS Test (System)
+```bash
+ansible-playbook playbooks/system/dns_test.yml
+```
+
 ### SSH Test (Cisco)
 ```bash
 ansible-playbook -i inventories/cisco.ini playbooks/cisco/ssh_test.yml

@@ -1,0 +1,147 @@
+---
+# System-level DNS test
+# Tests DNS resolution using a specific DNS server
+# Requires: dig or nslookup to be installed on target system
+
+- name: DNS resolution test for zappos.com using Cloudflare DNS (1.1.1.1)
+  hosts: all
+  gather_facts: no
+  
+  vars:
+    actionlog_dir: "{{ playbook_dir }}/../../actionlog/system/dns_test"
+    target_domain: "zappos.com"
+    dns_server: "1.1.1.1"
+    test_timeout: 10
+  
+  tasks:
+    - name: Create actionlog directory if it doesn't exist
+      file:
+        path: "{{ actionlog_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: true
+      
+    - name: Check if dig is installed
+      command: which dig
+      register: dig_check
+      changed_when: false
+      failed_when: false
+      
+    - name: Check if nslookup is installed
+      command: which nslookup
+      register: nslookup_check
+      changed_when: false
+      failed_when: false
+      
+    - name: Validate DNS tool availability
+      set_fact:
+        dns_tool_available: "{{ dig_check.rc == 0 or nslookup_check.rc == 0 }}"
+        use_dig: "{{ dig_check.rc == 0 }}"
+        use_nslookup: "{{ nslookup_check.rc == 0 and dig_check.rc != 0 }}"
+        dns_tool: "{{ 'dig' if dig_check.rc == 0 else 'nslookup' }}"
+        
+    - name: Fail if no DNS tool is available
+      fail:
+        msg: "Neither dig nor nslookup is installed. Install with: sudo apt-get install dnsutils (Debian/Ubuntu) or sudo yum install bind-utils (RHEL/CentOS)"
+      when: not dns_tool_available
+      
+    - name: Perform DNS lookup using dig
+      command: dig @{{ dns_server }} {{ target_domain }} +timeout={{ test_timeout }} +short
+      register: dns_result_dig
+      failed_when: false
+      changed_when: false
+      when: use_dig
+      
+    - name: Perform DNS lookup using nslookup
+      command: nslookup {{ target_domain }} {{ dns_server }}
+      register: dns_result_nslookup
+      failed_when: false
+      changed_when: false
+      when: use_nslookup
+      
+    - name: Set DNS result based on tool used
+      set_fact:
+        dns_result: "{{ dns_result_dig if use_dig else dns_result_nslookup }}"
+        dns_output: "{{ dns_result_dig.stdout if use_dig else dns_result_nslookup.stdout }}"
+        dns_rc: "{{ dns_result_dig.rc if use_dig else dns_result_nslookup.rc }}"
+        
+    - name: Extract IP addresses from dig output
+      set_fact:
+        resolved_ips: "{{ dns_output.split('\n') | select('match', '^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$') | list }}"
+      when: use_dig
+      
+    - name: Extract IP addresses from nslookup output
+      set_fact:
+        resolved_ips: "{{ dns_output | regex_findall('Address: ([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)') | map('last') | list }}"
+      when: use_nslookup
+      
+    - name: Validate DNS resolution success
+      set_fact:
+        test_status: "{{ 'SUCCESS' if (dns_rc == 0 and resolved_ips | length > 0) else 'FAILURE' }}"
+        test_message: "{{ 'DNS resolution successful' if (dns_rc == 0 and resolved_ips | length > 0) else 'DNS resolution failed or no IP addresses found' }}"
+        ip_count: "{{ resolved_ips | length }}"
+        
+    - name: Generate timestamp
+      command: date -Iseconds
+      register: timestamp_result
+      delegate_to: localhost
+      run_once: true
+      changed_when: false
+      
+    - name: Set timestamp fact
+      set_fact:
+        timestamp: "{{ timestamp_result.stdout }}"
+      delegate_to: localhost
+      run_once: true
+      
+    - name: Write test results to actionlog
+      copy:
+        content: |
+          ============================================
+          DNS TEST RESULTS
+          ============================================
+          Test Date: {{ timestamp }}
+          Host: {{ inventory_hostname }}
+          DNS Tool: {{ dns_tool }}
+          DNS Server: {{ dns_server }} (Cloudflare)
+          Target Domain: {{ target_domain }}
+          
+          STATUS: {{ test_status }}
+          MESSAGE: {{ test_message }}
+          
+          Resolved IP Addresses ({{ ip_count }}):
+          {% for ip in resolved_ips %}
+          - {{ ip }}
+          {% endfor %}
+          
+          DNS Tool Available: {{ dns_tool_available }}
+          Tool Used: {{ dns_tool }}
+          
+          FULL OUTPUT:
+          {{ dns_output }}
+          
+          ============================================
+          VALIDATION:
+          - DNS Tool Installed: {{ 'PASS' if dns_tool_available else 'FAIL' }}
+          - DNS Resolution: {{ 'PASS' if test_status == 'SUCCESS' else 'FAIL' }}
+          - IP Addresses Found: {{ 'PASS' if ip_count > 0 else 'FAIL' }}
+          - DNS Server Response: {{ 'PASS' if dns_rc == 0 else 'FAIL' }}
+          ============================================
+        dest: "{{ actionlog_dir }}/dns_test_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.txt"
+        mode: '0644'
+      delegate_to: localhost
+      
+    - name: Display test results
+      debug:
+        msg:
+          - "Test Status: {{ test_status }}"
+          - "{{ test_message }}"
+          - "DNS Server: {{ dns_server }}"
+          - "Resolved IPs: {{ resolved_ips | join(', ') }}"
+          - "Results saved to: {{ actionlog_dir }}/dns_test_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.txt"
+          
+    - name: Fail if DNS test was unsuccessful
+      fail:
+        msg: "DNS test FAILED - {{ test_message }}"
+      when: test_status == "FAILURE"
