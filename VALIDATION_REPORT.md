@@ -53,7 +53,7 @@
 ## 🔧 Issues Found
 
 ### 1. Hardcoded Paths
-- **GITHUB_AUTH_SETUP.md** line 23: `/home/tom/ansible` 
+- ~~GITHUB_AUTH_SETUP.md~~ (removed - merged into GITHUB_SETUP.md) 
   - **Fix**: Use relative paths or `$(pwd)`
 
 ### 2. Redundant Documentation

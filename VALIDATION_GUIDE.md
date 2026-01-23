@@ -70,7 +70,7 @@ actionlog/
 
 ### Ping Test
 ```bash
-cd /home/tom/ansible
+cd /path/to/ansible
 ansible-playbook playbooks/base/ping_test.yml
 ```
 
