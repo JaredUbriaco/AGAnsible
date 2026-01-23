@@ -1,0 +1,37 @@
+# Ansible specific
+*.retry
+*.pyc
+__pycache__/
+.ansible/
+
+# Actionlog files (optional - remove if you want to track test results)
+actionlog/**/*.txt
+
+# Sensitive data
+group_vars/*/vault
+host_vars/*/vault
+*.vault
+**/secrets.yml
+**/passwords.yml
+**/credentials.yml
+
+# OS specific
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+
+# Inventory with sensitive data (uncomment if needed)
+# inventories/production.ini
+# inventories/staging.ini

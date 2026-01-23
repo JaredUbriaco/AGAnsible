@@ -1,0 +1,98 @@
+---
+# Agnostic ping test - works on any system
+- name: Ping test to Google DNS (8.8.8.8)
+  hosts: all
+  gather_facts: no
+  connection: local
+  
+  vars:
+    actionlog_dir: "{{ playbook_dir }}/../../actionlog/base/ping_test"
+    target_host: "8.8.8.8"
+    ping_count: 4
+  
+  tasks:
+    - name: Create actionlog directory if it doesn't exist
+      file:
+        path: "{{ actionlog_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: true
+      
+    - name: Ping {{ target_host }} using command module
+      command: ping -c {{ ping_count }} {{ target_host }}
+      register: ping_result
+      failed_when: false
+      changed_when: false
+      
+    - name: Extract packet loss from ping results
+      set_fact:
+        packet_loss_match: "{{ ping_result.stdout | regex_search('([0-9]+)% packet loss') | default(['100']) }}"
+        packets_transmitted_match: "{{ ping_result.stdout | regex_search('([0-9]+) packets transmitted') | default(['0']) }}"
+        packets_received_match: "{{ ping_result.stdout | regex_search('([0-9]+) received') | default(['0']) }}"
+        
+    - name: Extract numeric values
+      set_fact:
+        packet_loss: "{{ (packet_loss_match | first | default('100')) | int }}"
+        packets_transmitted: "{{ (packets_transmitted_match | first | default('0')) | int }}"
+        packets_received: "{{ (packets_received_match | first | default('0')) | int }}"
+        
+    - name: Validate ping test success
+      set_fact:
+        test_status: "{{ 'SUCCESS' if packet_loss < 100 and packets_received > 0 else 'FAILURE' }}"
+        test_message: "{{ 'All packets received' if packet_loss == 0 else 'Packet loss detected: ' + (packet_loss | string) + '%' }}"
+        
+    - name: Generate timestamp
+      command: date -Iseconds
+      register: timestamp_result
+      delegate_to: localhost
+      run_once: true
+      changed_when: false
+      
+    - name: Set timestamp fact
+      set_fact:
+        timestamp: "{{ timestamp_result.stdout }}"
+      delegate_to: localhost
+      run_once: true
+      
+    - name: Write test results to actionlog
+      copy:
+        content: |
+          ============================================
+          PING TEST RESULTS
+          ============================================
+          Test Date: {{ timestamp }}
+          Target Host: {{ target_host }}
+          Ping Count: {{ ping_count }}
+          
+          STATUS: {{ test_status }}
+          MESSAGE: {{ test_message }}
+          
+          Packet Loss: {{ packet_loss }}%
+          Packets Transmitted: {{ packets_transmitted }}
+          Packets Received: {{ packets_received }}
+          
+          FULL OUTPUT:
+          {{ ping_result.stdout }}
+          
+          ============================================
+          VALIDATION:
+          - Packet loss < 100%: {{ 'PASS' if packet_loss < 100 else 'FAIL' }}
+          - Packets received > 0: {{ 'PASS' if packets_received > 0 else 'FAIL' }}
+          ============================================
+        dest: "{{ actionlog_dir }}/ping_test_{{ timestamp | replace(':', '-') | replace('+', '-') }}.txt"
+        mode: '0644'
+      delegate_to: localhost
+      
+    - name: Display ping results
+      debug:
+        msg:
+          - "Test Status: {{ test_status }}"
+          - "{{ test_message }}"
+          - "Packet Loss: {{ packet_loss }}"
+          - "Results saved to: {{ actionlog_dir }}/ping_test_{{ timestamp | replace(':', '-') | replace('+', '-') }}.txt"
+          
+    - name: Fail if ping test was unsuccessful
+      fail:
+        msg: "Ping test FAILED - {{ test_message }}"
+      when: test_status == "FAILURE"

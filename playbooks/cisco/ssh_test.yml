@@ -1,0 +1,120 @@
+---
+# Cisco-specific SSH connectivity test
+# Requires: Cisco device with SSH enabled
+# Inventory should define: ansible_connection=network_cli or ansible_connection=ansible.netcommon.network_cli
+
+- name: Test SSH connectivity to Cisco device
+  hosts: cisco-routers
+  gather_facts: no
+  
+  vars:
+    actionlog_dir: "{{ playbook_dir }}/../../actionlog/cisco/ssh_test"
+    test_timeout: 30
+  
+  tasks:
+    - name: Create actionlog directory if it doesn't exist
+      file:
+        path: "{{ actionlog_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: true
+      
+    - name: Check if this is a local test (no actual Cisco device)
+      set_fact:
+        is_local_test: "{{ ansible_connection == 'local' or ansible_host is not defined }}"
+        
+    - name: Test SSH connection by running show version (Cisco IOS)
+      cisco.ios.ios_command:
+        commands:
+          - show version
+      register: version_output
+      failed_when: false
+      when: not is_local_test
+      
+    - name: Validate SSH connection success (Cisco device)
+      set_fact:
+        test_status: "{{ 'SUCCESS' if (version_output.failed is not defined or not version_output.failed) else 'FAILURE' }}"
+        test_message: "{{ 'SSH connection successful' if (version_output.failed is not defined or not version_output.failed) else 'SSH connection failed: ' + (version_output.msg | default('Connection timeout or authentication failed')) }}"
+        device_info: "{{ version_output.stdout_lines[0] | default([]) if (version_output.stdout_lines is defined) else [] }}"
+      when: not is_local_test
+      
+    - name: Fallback - Test basic Ansible ping module (local test)
+      ansible.builtin.ping:
+      register: ping_test
+      failed_when: false
+      when: is_local_test
+      
+    - name: Validate local ping test
+      set_fact:
+        test_status: "{{ 'SUCCESS' if (ping_test.ping is defined) else 'FAILURE' }}"
+        test_message: "{{ 'Ansible ping successful (local test mode)' if (ping_test.ping is defined) else 'Ansible ping failed' }}"
+        device_info: []
+      when: is_local_test
+      
+    - name: Generate timestamp
+      command: date -Iseconds
+      register: timestamp_result
+      delegate_to: localhost
+      run_once: true
+      changed_when: false
+      
+    - name: Set timestamp fact
+      set_fact:
+        timestamp: "{{ timestamp_result.stdout }}"
+      delegate_to: localhost
+      run_once: true
+      
+    - name: Write test results to actionlog
+      copy:
+        content: |
+          ============================================
+          CISCO SSH TEST RESULTS
+          ============================================
+          Test Date: {{ timestamp }}
+          Host: {{ inventory_hostname }}
+          Connection Type: {{ ansible_connection | default('local') }}
+          Test Mode: {{ 'Local Test' if is_local_test else 'Cisco Device Test' }}
+          
+          STATUS: {{ test_status }}
+          MESSAGE: {{ test_message }}
+          
+          {% if not is_local_test and device_info is defined %}
+          DEVICE INFORMATION:
+          {{ device_info | to_nice_yaml }}
+          {% endif %}
+          
+          {% if not is_local_test and version_output is defined %}
+          FULL OUTPUT:
+          {{ version_output | to_nice_yaml }}
+          {% elif is_local_test and ping_test is defined %}
+          PING TEST OUTPUT:
+          {{ ping_test | to_nice_yaml }}
+          {% endif %}
+          
+          ============================================
+          VALIDATION:
+          - SSH Connection: {{ 'PASS' if test_status == 'SUCCESS' else 'FAIL' }}
+          - Device Response: {{ 'PASS' if (device_info | length > 0 or is_local_test) else 'FAIL' }}
+          - Test Completed: PASS
+          ============================================
+        dest: "{{ actionlog_dir }}/ssh_test_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.txt"
+        mode: '0644'
+      delegate_to: localhost
+      
+    - name: Display test results
+      debug:
+        msg:
+          - "Test Status: {{ test_status }}"
+          - "{{ test_message }}"
+          - "Results saved to: {{ actionlog_dir }}/ssh_test_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.txt"
+          
+    - name: Fail if SSH test was unsuccessful
+      fail:
+        msg: "SSH test FAILED - {{ test_message }}"
+      when: test_status == "FAILURE" and not is_local_test
+      
+    - name: Note about SSH test configuration
+      debug:
+        msg: "For actual Cisco SSH test, ensure inventory has ansible_connection=network_cli and credentials configured in group_vars or host_vars"
+      when: is_local_test

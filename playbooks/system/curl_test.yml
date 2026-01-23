@@ -1,0 +1,136 @@
+---
+# System-level curl test
+# Requires: curl to be installed on target system
+
+- name: Curl test to external URL
+  hosts: all
+  gather_facts: no
+  
+  vars:
+    actionlog_dir: "{{ playbook_dir }}/../../actionlog/system/curl_test"
+    test_urls:
+      - url: "https://httpbin.org/get"
+        expected_status: 200
+        description: "HTTPBin GET test"
+      - url: "https://www.google.com"
+        expected_status: 200
+        description: "Google connectivity test"
+  
+  tasks:
+    - name: Create actionlog directory if it doesn't exist
+      file:
+        path: "{{ actionlog_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: true
+      
+    - name: Check if curl is installed
+      command: which curl
+      register: curl_check
+      changed_when: false
+      failed_when: false
+      
+    - name: Validate curl installation
+      set_fact:
+        curl_installed: "{{ curl_check.rc == 0 }}"
+        curl_path: "{{ curl_check.stdout if curl_check.rc == 0 else 'NOT FOUND' }}"
+        
+    - name: Fail if curl is not installed
+      fail:
+        msg: "curl is not installed on the target system. Install with: apt-get install curl (Debian/Ubuntu) or yum install curl (RHEL/CentOS)"
+      when: not curl_installed
+      
+    - name: Test curl to each URL
+      uri:
+        url: "{{ item.url }}"
+        method: GET
+        return_content: yes
+        status_code: "{{ item.expected_status }}"
+        timeout: 10
+      register: curl_results
+      loop: "{{ test_urls }}"
+      failed_when: false
+      changed_when: false
+      
+    - name: Validate curl test results
+      set_fact:
+        test_results: "{{ test_results | default([]) + [{
+          'url': item.item.url,
+          'description': item.item.description,
+          'expected_status': item.item.expected_status,
+          'actual_status': item.status | default('N/A'),
+          'success': (item.status | default(0) | int) == (item.item.expected_status | int),
+          'response_time': item.elapsed | default('N/A'),
+          'content_length': item.content_length | default('N/A')
+        }] }}"
+      loop: "{{ curl_results.results | default([]) }}"
+      
+    - name: Calculate overall test status
+      set_fact:
+        overall_status: "{{ 'SUCCESS' if (test_results | selectattr('success', 'equalto', true) | list | length) == (test_results | length) else 'FAILURE' }}"
+        success_count: "{{ test_results | selectattr('success', 'equalto', true) | list | length }}"
+        total_count: "{{ test_results | length }}"
+        
+    - name: Generate timestamp
+      command: date -Iseconds
+      register: timestamp_result
+      delegate_to: localhost
+      run_once: true
+      changed_when: false
+      
+    - name: Set timestamp fact
+      set_fact:
+        timestamp: "{{ timestamp_result.stdout }}"
+      delegate_to: localhost
+      run_once: true
+      
+    - name: Write test results to actionlog
+      copy:
+        content: |
+          ============================================
+          CURL TEST RESULTS
+          ============================================
+          Test Date: {{ timestamp }}
+          Host: {{ inventory_hostname }}
+          Curl Installed: {{ curl_installed }}
+          Curl Path: {{ curl_path }}
+          
+          OVERALL STATUS: {{ overall_status }}
+          Tests Passed: {{ success_count }}/{{ total_count }}
+          
+          {% for result in test_results %}
+          --------------------------------------------
+          Test: {{ result.description }}
+          URL: {{ result.url }}
+          Expected Status: {{ result.expected_status }}
+          Actual Status: {{ result.actual_status }}
+          Status: {{ 'PASS' if result.success else 'FAIL' }}
+          Response Time: {{ result.response_time }}s
+          Content Length: {{ result.content_length }} bytes
+          {% endfor %}
+          
+          ============================================
+          VALIDATION:
+          - Curl Installation: {{ 'PASS' if curl_installed else 'FAIL' }}
+          - All URLs Accessible: {{ 'PASS' if overall_status == 'SUCCESS' else 'FAIL' }}
+          - HTTP Status Codes: {{ 'PASS' if overall_status == 'SUCCESS' else 'FAIL' }}
+          ============================================
+        dest: "{{ actionlog_dir }}/curl_test_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.txt"
+        mode: '0644'
+      delegate_to: localhost
+      
+    - name: Display test results
+      debug:
+        msg:
+          - "Overall Status: {{ overall_status }}"
+          - "Tests Passed: {{ success_count }}/{{ total_count }}"
+          - "Results saved to: {{ actionlog_dir }}/curl_test_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.txt"
+      loop: "{{ test_results }}"
+      loop_control:
+        label: "{{ item.description }}: {{ 'PASS' if item.success else 'FAIL' }} ({{ item.actual_status }})"
+        
+    - name: Fail if curl tests were unsuccessful
+      fail:
+        msg: "Curl test FAILED - {{ success_count }}/{{ total_count }} tests passed"
+      when: overall_status == "FAILURE"
