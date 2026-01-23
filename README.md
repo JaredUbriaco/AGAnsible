@@ -13,6 +13,7 @@ A comprehensive Ansible setup for network and system testing with validation, lo
 - [Playbook Categories](#playbook-categories)
 - [Usage Examples](#usage-examples)
 - [Actionlog System](#actionlog-system)
+- [Testing](#testing)
 - [Troubleshooting](#troubleshooting)
 
 ## 🎯 Overview
@@ -314,6 +315,38 @@ server2 ansible_host=192.168.1.11 ansible_user=admin
 [all:vars]
 ansible_python_interpreter=/usr/bin/python3
 ```
+
+## 🧪 Testing
+
+### Quick Test Suite
+
+Run all playbooks at once:
+```bash
+./test_all.sh
+```
+
+This will:
+- Run all available playbooks
+- Show pass/fail status for each
+- Display summary of results
+- List created actionlog files
+
+### Individual Playbook Tests
+
+```bash
+# Test ping
+ansible-playbook playbooks/base/ping_test.yml
+
+# Test curl
+ansible-playbook playbooks/system/curl_test.yml
+
+# Test DNS
+ansible-playbook playbooks/system/dns_test.yml
+```
+
+### Testing Checklist
+
+See **[TESTING_CHECKLIST.md](TESTING_CHECKLIST.md)** for a complete testing checklist.
 
 ## 🐛 Troubleshooting
 
