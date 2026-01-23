@@ -1,11 +1,11 @@
 #!/bin/bash
-# Ansible Installation Script for WSL/Linux
-# This script installs Python3, pip, and Ansible
+# Complete Ansible Environment Setup for WSL/Linux
+# Installs all required dependencies for the AGAnsible suite
 
 set -e
 
 echo "=========================================="
-echo "Ansible Installation Script"
+echo "AGAnsible Complete Environment Setup"
 echo "=========================================="
 echo ""
 
@@ -34,20 +34,55 @@ echo "Step 3: Installing Ansible..."
 sudo pip3 install --break-system-packages ansible
 
 echo ""
-echo "Step 4: Verifying installation..."
+echo "Step 4: Installing network and system tools..."
+echo "  - curl (for HTTP/curl tests)"
+sudo apt-get install -y curl
+
+echo "  - dnsutils (for DNS tests)"
+sudo apt-get install -y dnsutils
+
+echo "  - git (for version control)"
+sudo apt-get install -y git
+
+echo ""
+echo "Step 5: Verifying installations..."
+echo "Python3:"
+python3 --version
+
+echo ""
+echo "pip3:"
+pip3 --version
+
+echo ""
+echo "Ansible:"
 ansible --version
+
+echo ""
+echo "curl:"
+curl --version | head -1
+
+echo ""
+echo "dig:"
+dig -v | head -1
+
+echo ""
+echo "git:"
+git --version
 
 echo ""
 echo "=========================================="
 echo "Installation Complete!"
 echo "=========================================="
 echo ""
-echo "Optional: Install additional tools for system playbooks"
-echo "  - curl: sudo apt-get install -y curl (for curl_test.yml)"
-echo "  - dnsutils: sudo apt-get install -y dnsutils (for dns_test.yml)"
+echo "All required tools are now installed:"
+echo "  ✅ Python3 and pip3"
+echo "  ✅ Ansible"
+echo "  ✅ curl (for curl_test.yml)"
+echo "  ✅ dnsutils (for dns_test.yml)"
+echo "  ✅ git (for version control)"
 echo ""
 echo "Next steps:"
-echo "  1. Verify installation: ansible --version"
+echo "  1. Verify installation: ./verify.sh"
 echo "  2. Run a test: ansible-playbook playbooks/base/ping_test.yml"
-echo "  3. Check the README.md and REQUIREMENTS.md for more information"
+echo "  3. Check README.md and WSL_SETUP.md for more information"
 echo ""

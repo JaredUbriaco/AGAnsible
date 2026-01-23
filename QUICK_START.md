@@ -6,19 +6,12 @@
 # 1. Navigate to ansible directory
 cd /path/to/ansible
 
-# 2. Run installation script
+# 2. Run complete installation script (installs everything)
 chmod +x install.sh
 ./install.sh
 
-# 3. (Optional) Install tools for system playbooks
-chmod +x install_optional_tools.sh
-./install_optional_tools.sh
-
-# Or install manually:
-sudo apt-get update
-sudo apt-get install -y python3 python3-pip python3-apt
-sudo pip3 install --break-system-packages ansible
-sudo apt-get install -y curl dnsutils  # Optional: for system playbooks
+# That's it! All dependencies are installed automatically.
+# The script installs: Python3, pip, Ansible, curl, dnsutils, git
 ```
 
 ## Running Tests

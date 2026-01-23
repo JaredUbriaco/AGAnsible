@@ -32,28 +32,20 @@ This repository contains a well-organized Ansible setup with:
 - **sudo access** for package installation
 - **Internet connectivity** for downloading packages and testing
 
-### Required Software
-- Python 3.6+ (installed automatically)
-- pip3 (installed automatically)
-- Ansible (installed via setup script)
+### Required Software (All Installed Automatically)
+- **Python 3.6+** - Runtime environment
+- **pip3** - Python package manager
+- **Ansible 2.9+** - Automation framework
+- **curl** - HTTP client (for curl_test.yml)
+- **dnsutils** - DNS utilities (for dns_test.yml)
+- **git** - Version control system
 
-### Optional Software (for specific playbooks)
-- **curl** - For `playbooks/system/curl_test.yml`
-- **dnsutils** - For `playbooks/system/dns_test.yml`
-
-Install optional tools:
-```bash
-chmod +x install_optional_tools.sh
-./install_optional_tools.sh
-```
-
-Or install individually:
-```bash
-sudo apt-get install -y curl      # For curl tests
-sudo apt-get install -y dnsutils  # For DNS tests
-```
+All dependencies are installed automatically by `install.sh`. No manual installation needed.
 
 ## 🚀 Installation
+
+### For Complete WSL Setup
+See **[WSL_SETUP.md](WSL_SETUP.md)** for complete WSL2 environment setup from scratch.
 
 ### Step 1: Clone or Download Repository
 
@@ -66,23 +58,26 @@ cd ansible
 cd ansible
 ```
 
-### Step 2: Run Installation Script
+### Step 2: Run Complete Installation Script
 
-The installation script will:
-- Update package lists
-- Install Python3, pip3, and required dependencies
-- Install Ansible via pip
-- Verify installation
+The installation script installs **everything** needed:
+- Python3, pip3, python3-apt
+- Ansible
+- curl (for HTTP tests)
+- dnsutils (for DNS tests)
+- git (for version control)
 
 ```bash
 # Make script executable
 chmod +x install.sh
 
-# Run installation (requires sudo password)
+# Run complete installation (requires sudo password)
 ./install.sh
 ```
 
-**Or install manually:**
+This single command installs all dependencies. No additional steps needed.
+
+**Manual installation (not recommended):**
 
 ```bash
 # Update package lists

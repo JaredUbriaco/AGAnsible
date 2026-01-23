@@ -15,27 +15,23 @@
 
 ## Software Dependencies
 
-### Required (Installed Automatically)
+### Required (All Installed Automatically by install.sh)
 - **Python 3.6+** - Core runtime
 - **pip3** - Python package manager
+- **python3-apt** - Python apt bindings
 - **Ansible 2.9+** - Automation framework
+- **curl** - HTTP client (required for curl_test.yml)
+- **dnsutils** - DNS utilities including dig/nslookup (required for dns_test.yml)
+- **git** - Version control system
 
-### Optional (For Specific Playbooks)
-- **curl** - Required for `playbooks/system/curl_test.yml`
-  ```bash
-  sudo apt-get install -y curl
-  ```
+All tools are installed automatically. No manual installation required.
 
-- **dnsutils** (dig/nslookup) - Required for `playbooks/system/dns_test.yml`
-  ```bash
-  sudo apt-get install -y dnsutils
-  ```
-  Note: On RHEL/CentOS, use: `sudo yum install -y bind-utils`
-
+### Additional Collections (For Cisco Playbooks)
 - **Cisco Network Collections** - Required for Cisco playbooks
   ```bash
   ansible-galaxy collection install cisco.ios
   ```
+  Note: This is only needed if using Cisco-specific playbooks with actual Cisco devices.
 
 ## Package Manager Compatibility
 
@@ -190,20 +186,22 @@ chmod -R 755 actionlog/
 - ✅ WSL2
 - ⚠️  Older Python 3.6-3.8 may have limited module support
 
-## Additional Tools (Optional)
+## Additional Tools (Installed by install.sh)
 
 ### Development Tools
-- **git** - For version control
-- **vim/nano** - Text editors
-- **tree** - Directory visualization
-  ```bash
-  sudo apt-get install -y tree
-  ```
+- **git** - Version control system (installed automatically)
 
-### Network Tools
+### Network Tools (Installed by install.sh)
+- **curl** - HTTP client (installed automatically)
+- **dnsutils** - DNS utilities (installed automatically)
+
+### Additional Network Tools (For Future Playbooks)
+These may be added to install.sh as new playbooks are created:
 - **nmap** - Network scanning
 - **tcpdump** - Packet capture
 - **wireshark** - Network analysis
+- **netcat** - Network utility
+- **iperf3** - Network performance testing
 
 ## Environment Variables
 
