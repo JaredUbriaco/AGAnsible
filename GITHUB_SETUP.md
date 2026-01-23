@@ -110,6 +110,56 @@ Check your GitHub repository:
    - No API keys in configuration
    - No SSH private keys
 
+## 🔐 Authentication Setup
+
+### Personal Access Token (Recommended)
+
+1. **Create a Personal Access Token**:
+   - Go to: https://github.com/settings/tokens
+   - Click "Generate new token" → "Generate new token (classic)"
+   - Name it: "WSL Ansible Access"
+   - Select scopes: `repo` (full control of private repositories)
+   - Click "Generate token"
+   - **Copy the token** (you won't see it again!)
+
+2. **Push using the token**:
+   ```bash
+   cd /path/to/ansible-playbooks
+   git push -u origin main
+   ```
+   - Username: Your GitHub username
+   - Password: **Paste your personal access token** (not your GitHub password)
+
+3. **Credentials will be saved** for future use
+
+### SSH Keys (Alternative)
+
+1. **Generate SSH key**:
+   ```bash
+   ssh-keygen -t ed25519 -C "your-email@example.com"
+   # Press Enter to accept default location
+   # Press Enter for no passphrase (or set one)
+   ```
+
+2. **Copy public key**:
+   ```bash
+   cat ~/.ssh/id_ed25519.pub
+   ```
+
+3. **Add to GitHub**:
+   - Go to: https://github.com/settings/keys
+   - Click "New SSH key"
+   - Title: "WSL Ansible"
+   - Key: Paste the output from step 2
+   - Click "Add SSH key"
+
+4. **Update remote to use SSH**:
+   ```bash
+   cd /path/to/ansible-playbooks
+   git remote set-url origin git@github.com:YOUR_USERNAME/REPO_NAME.git
+   git push -u origin main
+   ```
+
 ## 📥 Downloading to New System
 
 ### Quick Download
