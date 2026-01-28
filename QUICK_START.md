@@ -1,42 +1,70 @@
 # Quick Start Guide
 
-## Installation (One-Time Setup)
+Fast reference for getting started with AGAnsible.
+
+## 🚀 Complete Setup (First Time)
+
+### For Windows Users (WSL Setup Required)
+
+1. **Install WSL2** (PowerShell as Admin):
+   ```powershell
+   wsl --install
+   ```
+   Restart Windows when prompted.
+
+2. **Launch WSL** and complete initial setup (create username/password)
+
+3. **Update system**:
+   ```bash
+   sudo apt-get update && sudo apt-get upgrade -y
+   ```
+
+### For All Users (After WSL/Linux is Ready)
 
 ```bash
-# 1. Navigate to ansible directory
-cd /path/to/ansible
+# 1. Clone repository
+cd ~
+git clone https://github.com/JaredUbriaco/AGAnsible.git
+cd AGAnsible
 
-# 2. Run complete installation script (installs everything)
+# 2. Install everything
 chmod +x install.sh
 ./install.sh
 
-# That's it! All dependencies are installed automatically.
-# The script installs: Python3, pip, Ansible, curl, dnsutils, git
+# 3. Verify installation
+./verify.sh
+
+# 4. Test everything
+./test_all.sh
 ```
 
-## Running Tests
+**That's it!** All dependencies are installed automatically.
 
-### Ping Test (Agnostic)
+## 🏃 Running Tests
+
+### Run All Tests
+```bash
+./test_all.sh
+```
+
+### Individual Tests
+
+**Ping Test** (Basic connectivity):
 ```bash
 ansible-playbook playbooks/base/ping_test.yml
 ```
 
-### Curl Test (System)
+**Curl Test** (HTTP connectivity):
 ```bash
 ansible-playbook playbooks/system/curl_test.yml
 ```
 
-### DNS Test (System)
+**DNS Test** (DNS resolution):
 ```bash
 ansible-playbook playbooks/system/dns_test.yml
 ```
 
-### SSH Test (Cisco)
-```bash
-ansible-playbook -i inventories/cisco.ini playbooks/cisco/ssh_test.yml
-```
-
-## Viewing Results
+## 📊 Viewing Results
 
 ```bash
 # Latest ping test
@@ -44,21 +72,24 @@ cat $(ls -t actionlog/base/ping_test/*.txt | head -1)
 
 # Latest curl test
 cat $(ls -t actionlog/system/curl_test/*.txt | head -1)
+
+# Latest DNS test
+cat $(ls -t actionlog/system/dns_test/*.txt | head -1)
 ```
 
-## The Trinity
+## 🔺 The Trinity
 
 1. **Inventory** (`inventories/`) = WHERE (target hosts)
 2. **Playbooks** (`playbooks/`) = WHAT (tasks to run)
 3. **Modules** = HOW (tools that execute)
 
-## Folder Organization
+## 📂 Folder Organization
 
 - **base/** = Works on ANY system (agnostic)
 - **cisco/** = Cisco-specific requirements
 - **system/** = OS/system-level features
 
-## Common Commands
+## 🔧 Common Commands
 
 ```bash
 # Check Ansible version
@@ -69,4 +100,16 @@ find playbooks -name "*.yml"
 
 # List all actionlog results
 find actionlog -name "*.txt" | sort
+
+# Run verification
+./verify.sh
+
+# Run all tests
+./test_all.sh
 ```
+
+## 📚 Need More Help?
+
+- **Complete setup**: See [README.md](README.md) or [WSL_SETUP.md](WSL_SETUP.md)
+- **Testing guide**: See [TESTING_CHECKLIST.md](TESTING_CHECKLIST.md)
+- **Quick test**: See [QUICK_TEST.md](QUICK_TEST.md)

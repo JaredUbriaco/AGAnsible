@@ -66,6 +66,19 @@ actionlog/
 - Wrong HTTP status code
 - Connection timeout
 
+### DNS Test (`system/dns_test.yml`)
+**Validations:**
+- DNS Tool Installed: PASS/FAIL
+- DNS Resolution: PASS/FAIL
+- IP Addresses Found: PASS/FAIL
+- DNS Server Response: PASS/FAIL
+
+**Failure Conditions:**
+- dig/nslookup not installed
+- DNS resolution failed
+- No IP addresses found
+- DNS server timeout
+
 ## Running Tests
 
 ### Ping Test
@@ -84,6 +97,11 @@ ansible-playbook -i inventories/cisco.ini playbooks/cisco/ssh_test.yml
 ansible-playbook playbooks/system/curl_test.yml
 ```
 
+### DNS Test
+```bash
+ansible-playbook playbooks/system/dns_test.yml
+```
+
 ## Viewing Results
 
 ### Latest Results
@@ -96,6 +114,9 @@ ls -t actionlog/cisco/ssh_test/*.txt | head -1 | xargs cat
 
 # Latest curl test
 ls -t actionlog/system/curl_test/*.txt | head -1 | xargs cat
+
+# Latest DNS test
+ls -t actionlog/system/dns_test/*.txt | head -1 | xargs cat
 ```
 
 ### All Results

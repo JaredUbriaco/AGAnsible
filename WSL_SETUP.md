@@ -40,6 +40,8 @@ On first launch:
 
 ## 📦 AGAnsible Suite Installation
 
+**Now that WSL is set up, proceed with AGAnsible installation:**
+
 ### Step 1: Clone Repository
 
 ```bash

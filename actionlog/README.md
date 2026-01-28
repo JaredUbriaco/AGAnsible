@@ -13,7 +13,8 @@ actionlog/
 │   └── ssh_test/     # SSH connectivity test results
 │
 └── system/           # System-level test results
-    └── curl_test/    # Curl/HTTP test results
+    ├── curl_test/    # Curl/HTTP test results
+    └── dns_test/     # DNS resolution test results
 ```
 
 ## File Naming Convention
@@ -21,6 +22,7 @@ actionlog/
 - **Ping Test**: `ping_test_<timestamp>.txt`
 - **SSH Test**: `ssh_test_<hostname>_<timestamp>.txt`
 - **Curl Test**: `curl_test_<hostname>_<timestamp>.txt`
+- **DNS Test**: `dns_test_<hostname>_<timestamp>.txt`
 
 ## File Contents
 
@@ -43,4 +45,7 @@ ls -t actionlog/cisco/ssh_test/ | head -1 | xargs cat
 
 # Latest curl test
 ls -t actionlog/system/curl_test/ | head -1 | xargs cat
+
+# Latest DNS test
+ls -t actionlog/system/dns_test/ | head -1 | xargs cat
 ```
