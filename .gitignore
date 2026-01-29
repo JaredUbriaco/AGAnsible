@@ -37,6 +37,10 @@ Thumbs.db
 notes.md
 NOTES.md
 
+# Rough draft / work-in-progress docs (do not upload to GitHub)
+roughdraft.md
+ROUGHDRAFT.md
+
 # Inventory with sensitive data (uncomment if needed)
 # inventories/production.ini
 # inventories/staging.ini

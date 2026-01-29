@@ -20,8 +20,12 @@ A comprehensive Ansible automation suite for network and system testing, auditin
 - [Testing](#testing)
 - [Configuration](#configuration)
 - [Troubleshooting](#troubleshooting)
+- [Adding New Playbooks](#adding-new-playbooks)
+- [Security Notes](#security-notes)
 - [Additional Resources](#additional-resources)
+- [Verification Checklist](#verification-checklist)
 
+<a id="overview"></a>
 ## 🎯 Overview
 
 The AGAnsible suite provides:
@@ -32,6 +36,7 @@ The AGAnsible suite provides:
 - **Ready-to-use playbooks** - Network, system, and connectivity tests
 - **Full documentation** - Complete guides for setup and usage
 
+<a id="prerequisites"></a>
 ## 📦 Prerequisites
 
 ### System Requirements
@@ -50,10 +55,12 @@ The installation automatically provides:
 
 All dependencies are installed automatically. No manual configuration needed.
 
+<a id="complete-setup-guide"></a>
 ## 🚀 Complete Setup Guide
 
 Follow these steps in order for a complete setup from scratch.
 
+<a id="step-1-wsl2-environment-setup-windows-users"></a>
 ### Step 1: WSL2 Environment Setup (Windows Users)
 
 **If you're on Windows**, you need to set up WSL2 first. **If you're already on Linux**, skip to Step 2.
@@ -95,6 +102,7 @@ Follow these steps in order for a complete setup from scratch.
 
 **Linux users**: If you're already on Linux, proceed to Step 2.
 
+<a id="step-2-clone-repository"></a>
 ### Step 2: Clone Repository
 
 Once WSL/Linux is ready:
@@ -110,6 +118,7 @@ git clone https://github.com/JaredUbriaco/AGAnsible.git
 cd AGAnsible
 ```
 
+<a id="step-3-install-agansible-suite"></a>
 ### Step 3: Install AGAnsible Suite
 
 The installation script installs **everything** needed:
@@ -131,6 +140,7 @@ chmod +x install.sh
 
 The script verifies each installation automatically.
 
+<a id="step-4-verify-installation"></a>
 ### Step 4: Verify Installation
 
 ```bash
@@ -146,6 +156,7 @@ This checks:
 
 **Expected output**: All checks should show ✅ (green checkmarks)
 
+<a id="quick-start"></a>
 ## 🏃 Quick Start
 
 After installation, you can immediately run tests:
@@ -177,6 +188,7 @@ ansible-playbook playbooks/system/dns_test.yml
 ansible-playbook -i inventories/cisco.ini playbooks/cisco/ssh_test.yml
 ```
 
+<a id="project-structure"></a>
 ## 📁 Project Structure
 
 ```
@@ -204,7 +216,8 @@ AGAnsible/
 │   │   └── ssh_test.yml       # SSH connectivity test
 │   └── system/                 # System-level tests
 │       ├── curl_test.yml      # HTTP/curl test
-│       └── dns_test.yml       # DNS resolution test
+│       ├── dns_test.yml       # DNS resolution test
+│       └── ...                # See playbooks/system/README.md for full list
 │
 ├── roles/                       # Reusable Ansible roles (for future use)
 ├── group_vars/                  # Variables for inventory groups
@@ -220,6 +233,7 @@ AGAnsible/
         └── dns_test/           # DNS test results
 ```
 
+<a id="the-trinity-of-ansible"></a>
 ## 🔺 The Trinity of Ansible
 
 Ansible operates on three fundamental components:
@@ -257,6 +271,7 @@ Inventory → Playbook → Modules → Execution
    (WHERE)    (WHAT)     (HOW)      (RESULT)
 ```
 
+<a id="playbook-categories"></a>
 ## 📂 Playbook Categories
 
 ### `base/` - Agnostic Playbooks
@@ -273,10 +288,11 @@ Inventory → Playbook → Modules → Execution
 
 ### `system/` - System-Level Playbooks
 - **Purpose**: Target operating system features
-- **Examples**: Curl tests, DNS tests, service management
+- **Examples**: Curl tests, DNS tests, port scan, network interfaces, SSL cert check
 - **Requires**: Specific OS tools (curl, dnsutils, etc.)
-- **Current playbooks**: `curl_test.yml`, `dns_test.yml`
+- **Current playbooks**: `curl_test.yml`, `dns_test.yml`, `port_scan.yml`, `network_interfaces.yml`, `ssl_cert_check.yml`, `firewall_check.yml`, `network_stats.yml`, `traceroute_test.yml` (see [LOCALHOST_TESTS.md](LOCALHOST_TESTS.md))
 
+<a id="usage-examples"></a>
 ## 💡 Usage Examples
 
 ### Example 1: Ping Test
@@ -328,6 +344,7 @@ EOF
 ansible-playbook -i inventories/myhosts.ini playbooks/base/ping_test.yml
 ```
 
+<a id="actionlog-system"></a>
 ## 📊 Actionlog System
 
 All playbook executions automatically create detailed log files in the `actionlog/` directory.
@@ -370,6 +387,9 @@ Each file contains:
 - **Validation**: PASS/FAIL for each check
 - **Full Output**: Complete command/response data
 
+For a full review of the actionlog system (coverage, scripts, schemas), see **[ACTIONLOG_SYSTEM_REVIEW.md](ACTIONLOG_SYSTEM_REVIEW.md)**.
+
+<a id="testing"></a>
 ## 🧪 Testing
 
 ### Quick Test Suite
@@ -440,7 +460,9 @@ ansible-playbook playbooks/system/dns_test.yml
 
 - **[TESTING_CHECKLIST.md](TESTING_CHECKLIST.md)** - Complete testing checklist
 - **[QUICK_TEST.md](QUICK_TEST.md)** - Quick testing guide
+- **[LOCALHOST_TESTS.md](LOCALHOST_TESTS.md)** - Localhost-only playbooks and `test_localhost.sh` usage
 
+<a id="configuration"></a>
 ## 🔧 Configuration
 
 ### Ansible Configuration (`ansible.cfg`)
@@ -467,6 +489,7 @@ server2 ansible_host=192.168.1.11 ansible_user=admin
 ansible_python_interpreter=/usr/bin/python3
 ```
 
+<a id="troubleshooting"></a>
 ## 🐛 Troubleshooting
 
 ### Issue: "WSL not installed" or "wsl: command not found"
@@ -546,6 +569,7 @@ nslookup google.com
 # Then restart WSL
 ```
 
+<a id="adding-new-playbooks"></a>
 ## 📝 Adding New Playbooks
 
 ### Step 1: Create Playbook File
@@ -574,6 +598,7 @@ mkdir -p actionlog/category/my_test
 ansible-playbook playbooks/category/my_test.yml
 ```
 
+<a id="security-notes"></a>
 ## 🔐 Security Notes
 
 - **Passwords**: Never commit passwords or secrets to git
@@ -581,6 +606,7 @@ ansible-playbook playbooks/category/my_test.yml
 - **SSH Keys**: Use SSH keys instead of passwords when possible
 - **Inventory**: Don't commit production inventories with sensitive data
 
+<a id="additional-resources"></a>
 ## 📚 Additional Resources
 
 ### Documentation Files
@@ -590,6 +616,9 @@ ansible-playbook playbooks/category/my_test.yml
 - **[TESTING_CHECKLIST.md](TESTING_CHECKLIST.md)** - Comprehensive testing guide
 - **[QUICK_START.md](QUICK_START.md)** - Quick reference guide
 - **[QUICK_TEST.md](QUICK_TEST.md)** - Quick testing guide
+- **[LOCALHOST_TESTS.md](LOCALHOST_TESTS.md)** - Localhost playbooks and `test_localhost.sh`
+- **[LINTING.md](LINTING.md)** - Linting and code quality
+- **[ACTIONLOG_SYSTEM_REVIEW.md](ACTIONLOG_SYSTEM_REVIEW.md)** - Actionlog system review
 
 ### External Resources
 - [Ansible Documentation](https://docs.ansible.com/)
@@ -597,6 +626,7 @@ ansible-playbook playbooks/category/my_test.yml
 - [Ansible Network Modules](https://docs.ansible.com/ansible/latest/network/index.html)
 - [WSL Documentation](https://docs.microsoft.com/en-us/windows/wsl/)
 
+<a id="verification-checklist"></a>
 ## ✅ Verification Checklist
 
 After installation, verify:
