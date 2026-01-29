@@ -1,0 +1,11 @@
+---
+# Common role - Reusable tasks for AGAnsible playbooks
+# This role provides common functionality used across multiple playbooks
+
+# Note: This is a task-only role. Import specific tasks as needed:
+# - import_tasks: roles/common/tasks/timestamp.yml
+# - import_tasks: roles/common/tasks/actionlog_setup.yml
+
+- name: Common role loaded
+  debug:
+    msg: "Common role tasks are available. Import specific tasks as needed."

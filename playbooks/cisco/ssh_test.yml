@@ -8,6 +8,12 @@
   gather_facts: no
   
   vars:
+    # Playbook metadata
+    playbook_version: "1.0.0"
+    playbook_author: "AGAnsible Team"
+    playbook_description: "SSH connectivity test for Cisco network devices with fallback to local ping test"
+    
+    # Playbook variables
     actionlog_dir: "{{ playbook_dir }}/../../actionlog/cisco/ssh_test"
     test_timeout: 30
   

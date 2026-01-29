@@ -1,0 +1,25 @@
+---
+# Validation task: Validate URL format
+# Usage: import_tasks: roles/validation/tasks/validate_url.yml
+# Variables:
+#   - url: URL to validate (required)
+# Result: Fails if URL format is invalid
+
+- name: Validate URL format
+  assert:
+    that:
+      - url is defined
+      - url != ""
+      - url | regex_search('^https?://[a-zA-Z0-9.-]+(\\.[a-zA-Z]{2,})?(/.*)?$')
+    fail_msg: "Invalid URL format: {{ url }}. Expected format: http://example.com or https://example.com"
+    success_msg: "URL format is valid: {{ url }}"
+
+- name: Validate URL does not contain dangerous characters
+  assert:
+    that:
+      - "'|' not in url"
+      - "'&' not in url or url.index('&') == url.index('?')"
+      - "'`' not in url"
+      - "'$' not in url or url.index('$') > url.index('://')"
+    fail_msg: "URL contains potentially dangerous characters: {{ url }}"
+    success_msg: "URL passed security validation"

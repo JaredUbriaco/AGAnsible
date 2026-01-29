@@ -8,6 +8,12 @@
   gather_facts: no
   
   vars:
+    # Playbook metadata
+    playbook_version: "1.0.0"
+    playbook_author: "AGAnsible Team"
+    playbook_description: "DNS resolution test using a specific DNS server to validate domain name resolution"
+    
+    # Playbook variables
     actionlog_dir: "{{ playbook_dir }}/../../actionlog/system/dns_test"
     target_domain: "zappos.com"
     dns_server: "1.1.1.1"

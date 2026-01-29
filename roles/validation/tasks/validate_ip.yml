@@ -1,0 +1,23 @@
+---
+# Validation task: Validate IP address format
+# Usage: import_tasks: roles/validation/tasks/validate_ip.yml
+# Variables:
+#   - ip_address: IP address to validate (required)
+# Result: Fails if IP address is invalid
+
+- name: Validate IP address format
+  assert:
+    that:
+      - ip_address is defined
+      - ip_address != ""
+      - ip_address | regex_search('^([0-9]{1,3}\\.){3}[0-9]{1,3}$')
+    fail_msg: "Invalid IP address format: {{ ip_address }}. Expected format: X.X.X.X"
+    success_msg: "IP address format is valid: {{ ip_address }}"
+
+- name: Validate IP address octet ranges
+  assert:
+    that:
+      - ip_address.split('.') | map('int') | select('>', 255) | list | length == 0
+      - ip_address.split('.') | map('int') | select('<', 0) | list | length == 0
+    fail_msg: "IP address octets must be between 0 and 255: {{ ip_address }}"
+    success_msg: "IP address octets are within valid range"

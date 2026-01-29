@@ -1,0 +1,22 @@
+---
+# Common task: Setup actionlog directory
+# Usage: import_tasks: roles/common/tasks/actionlog_setup.yml
+# Variables:
+#   - actionlog_dir: Path to actionlog directory (required)
+# Result: Creates actionlog directory if it doesn't exist
+
+- name: Validate actionlog_dir variable
+  assert:
+    that:
+      - actionlog_dir is defined
+      - actionlog_dir != ""
+    fail_msg: "actionlog_dir variable must be defined"
+    success_msg: "actionlog_dir is set to {{ actionlog_dir }}"
+
+- name: Create actionlog directory if it doesn't exist
+  file:
+    path: "{{ actionlog_dir }}"
+    state: directory
+    mode: "{{ actionlog_dir_mode | default('0755') }}"
+  delegate_to: localhost
+  run_once: true

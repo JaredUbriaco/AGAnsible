@@ -1,0 +1,66 @@
+---
+# Default variables for all hosts
+# These can be overridden by:
+# - Command line: -e variable_name=value
+# - host_vars/<hostname>.yml
+# - group_vars/<group_name>.yml
+# - Inventory file variables
+
+# Actionlog configuration
+actionlog_base_dir: "{{ playbook_dir }}/../actionlog"
+actionlog_file_mode: '0644'
+actionlog_dir_mode: '0755'
+
+# Network test defaults
+ping_default_count: 4
+ping_default_timeout: 10
+ping_default_target: "8.8.8.8"  # Google DNS
+
+# DNS test defaults
+dns_default_server: "1.1.1.1"  # Cloudflare DNS
+dns_default_timeout: 10
+dns_default_domain: "zappos.com"
+
+# HTTP/Curl test defaults
+curl_default_timeout: 10
+curl_default_test_urls:
+  - url: "https://httpbin.org/get"
+    expected_status: 200
+    description: "HTTPBin GET test"
+  - url: "https://www.google.com"
+    expected_status: 200
+    description: "Google connectivity test"
+
+# Cisco device defaults
+cisco_default_timeout: 30
+cisco_default_connection: "ansible.netcommon.network_cli"
+cisco_default_network_os: "cisco.ios.ios"
+
+# Retry configuration
+retry_default_attempts: 3
+retry_default_delay: 2
+retry_exponential_backoff: true
+
+# Validation thresholds
+validation_min_packets_received: 1
+validation_max_packet_loss: 100
+validation_http_success_codes:
+  - 200
+  - 201
+  - 202
+  - 204
+
+# Playbook metadata defaults
+playbook_author: "AGAnsible Team"
+playbook_version: "1.0.0"
+
+# Output format
+output_format: "text"  # Options: text, json, both
+
+# Logging
+log_timestamp_format: "iso8601"  # iso8601, epoch, human
+log_include_full_output: true
+
+# Security settings
+validate_inputs: true
+sanitize_outputs: true

@@ -1,0 +1,31 @@
+---
+# Common task: Retry logic for network operations
+# Usage: Add retries and delay to network tasks
+# Variables:
+#   - retry_attempts: Number of retry attempts (default: 3)
+#   - retry_delay: Delay between retries in seconds (default: 2)
+#   - retry_exponential_backoff: Use exponential backoff (default: true)
+
+# Example usage in playbook:
+# - name: Network operation
+#   command: some_command
+#   register: result
+#   retries: "{{ retry_attempts | default(3) }}"
+#   delay: "{{ retry_delay | default(2) }}"
+#   until: result.rc == 0
+
+# Note: This file documents retry patterns. Actual retry logic is added
+# directly to tasks using retries, delay, and until parameters.
+
+- name: Retry configuration loaded
+  debug:
+    msg: |
+      Retry configuration:
+      - Attempts: {{ retry_attempts | default(retry_default_attempts | default(3)) }}
+      - Delay: {{ retry_delay | default(retry_default_delay | default(2)) }}s
+      - Exponential backoff: {{ retry_exponential_backoff | default(true) }}
+      
+      Add to your network tasks:
+      retries: "{{ retry_default_attempts | default(3) }}"
+      delay: "{{ retry_default_delay | default(2) }}"
+      until: <condition>

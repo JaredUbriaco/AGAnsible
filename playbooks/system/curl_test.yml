@@ -7,6 +7,12 @@
   gather_facts: no
   
   vars:
+    # Playbook metadata
+    playbook_version: "1.0.0"
+    playbook_author: "AGAnsible Team"
+    playbook_description: "HTTP/HTTPS connectivity test using curl to validate web service accessibility"
+    
+    # Playbook variables
     actionlog_dir: "{{ playbook_dir }}/../../actionlog/system/curl_test"
     test_urls:
       - url: "https://httpbin.org/get"

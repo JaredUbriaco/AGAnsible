@@ -1,0 +1,17 @@
+---
+# Common task: Generate timestamp
+# Usage: import_tasks: roles/common/tasks/timestamp.yml
+# Result: Sets 'timestamp' fact with ISO8601 format timestamp
+
+- name: Generate timestamp
+  command: date -Iseconds
+  register: timestamp_result
+  delegate_to: localhost
+  run_once: true
+  changed_when: false
+
+- name: Set timestamp fact
+  set_fact:
+    timestamp: "{{ timestamp_result.stdout }}"
+  delegate_to: localhost
+  run_once: true

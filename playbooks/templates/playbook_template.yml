@@ -1,0 +1,86 @@
+---
+# Playbook Template
+# Copy this template to create a new playbook
+# Replace {{ PLACEHOLDERS }} with actual values
+
+- name: {{ PLAYBOOK_NAME }}
+  hosts: {{ TARGET_HOSTS }}
+  gather_facts: {{ GATHER_FACTS | default('no') }}
+  connection: {{ CONNECTION | default('local') }}
+  
+  vars:
+    # Playbook metadata
+    playbook_version: "{{ PLAYBOOK_VERSION | default('1.0.0') }}"
+    playbook_author: "{{ PLAYBOOK_AUTHOR | default('AGAnsible Team') }}"
+    playbook_description: "{{ PLAYBOOK_DESCRIPTION }}"
+    
+    # Playbook variables
+    actionlog_dir: "{{ playbook_dir }}/../../actionlog/{{ CATEGORY }}/{{ TEST_NAME }}"
+    
+    # Add your custom variables here
+    # Example:
+    # test_timeout: 10
+    # target_host: "example.com"
+  
+  tasks:
+    # Setup actionlog directory
+    - name: Setup actionlog directory
+      import_tasks: ../../../roles/common/tasks/actionlog_setup.yml
+    
+    # Generate timestamp
+    - name: Generate timestamp
+      import_tasks: ../../../roles/common/tasks/timestamp.yml
+    
+    # Add your test tasks here
+    # Example:
+    # - name: Run test
+    #   command: echo "Test"
+    #   register: test_result
+    #   failed_when: false
+    #   changed_when: false
+    
+    # Validate results
+    - name: Validate test success
+      set_fact:
+        test_status: "{{ 'SUCCESS' if (test_result.rc == 0) else 'FAILURE' }}"
+        test_message: "{{ 'Test completed successfully' if (test_result.rc == 0) else 'Test failed' }}"
+    
+    # Write results to actionlog
+    - name: Write test results to actionlog
+      copy:
+        content: |
+          ============================================
+          {{ PLAYBOOK_NAME | upper }} RESULTS
+          ============================================
+          Test Date: {{ timestamp }}
+          Host: {{ inventory_hostname }}
+          
+          STATUS: {{ test_status }}
+          MESSAGE: {{ test_message }}
+          
+          {% if test_result is defined %}
+          FULL OUTPUT:
+          {{ test_result.stdout | default('N/A') }}
+          {% endif %}
+          
+          ============================================
+          VALIDATION:
+          - Test Status: {{ 'PASS' if test_status == 'SUCCESS' else 'FAIL' }}
+          ============================================
+        dest: "{{ actionlog_dir }}/{{ TEST_NAME }}_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.txt"
+        mode: '{{ actionlog_file_mode | default("0644") }}'
+      delegate_to: localhost
+    
+    # Display results
+    - name: Display test results
+      debug:
+        msg:
+          - "Test Status: {{ test_status }}"
+          - "{{ test_message }}"
+          - "Results saved to: {{ actionlog_dir }}/{{ TEST_NAME }}_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.txt"
+    
+    # Fail if test was unsuccessful
+    - name: Fail if test was unsuccessful
+      fail:
+        msg: "Test FAILED - {{ test_message }}"
+      when: test_status == "FAILURE"

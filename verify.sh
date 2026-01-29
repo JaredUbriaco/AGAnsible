@@ -53,12 +53,28 @@ echo "Checking Python installation..."
 check_command python3
 check_command pip3
 
+# Check DNS utilities
+echo ""
+echo "Checking DNS utilities..."
+if command -v dig &> /dev/null || command -v nslookup &> /dev/null; then
+    if command -v dig &> /dev/null; then
+        echo -e "${GREEN}✅${NC} dig installed: $(dig -v 2>&1 | head -1)"
+    fi
+    if command -v nslookup &> /dev/null; then
+        echo -e "${GREEN}✅${NC} nslookup installed"
+    fi
+else
+    echo -e "${RED}❌${NC} Neither dig nor nslookup found (install with: sudo apt-get install dnsutils)"
+    FAILURES=$((FAILURES + 1))
+fi
+
 # Check playbook structure
 echo ""
 echo "Checking playbook structure..."
 check_path "playbooks/base/ping_test.yml" "Ping test playbook"
 check_path "playbooks/cisco/ssh_test.yml" "SSH test playbook"
 check_path "playbooks/system/curl_test.yml" "Curl test playbook"
+check_path "playbooks/system/dns_test.yml" "DNS test playbook"
 
 # Check configuration
 echo ""

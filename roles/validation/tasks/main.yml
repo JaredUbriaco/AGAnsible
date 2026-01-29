@@ -1,0 +1,12 @@
+---
+# Validation role - Input validation tasks for AGAnsible playbooks
+# Provides validation for common input types: IP addresses, URLs, domain names
+
+# Note: Import specific validation tasks as needed:
+# - import_tasks: roles/validation/tasks/validate_ip.yml
+# - import_tasks: roles/validation/tasks/validate_url.yml
+# - import_tasks: roles/validation/tasks/validate_domain.yml
+
+- name: Validation role loaded
+  debug:
+    msg: "Validation role tasks are available. Import specific validation tasks as needed."

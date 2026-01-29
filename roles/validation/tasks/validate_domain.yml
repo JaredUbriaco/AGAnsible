@@ -1,0 +1,33 @@
+---
+# Validation task: Validate domain name format
+# Usage: import_tasks: roles/validation/tasks/validate_domain.yml
+# Variables:
+#   - domain: Domain name to validate (required)
+# Result: Fails if domain format is invalid
+
+- name: Validate domain name format
+  assert:
+    that:
+      - domain is defined
+      - domain != ""
+      - domain | regex_search('^([a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,}$')
+    fail_msg: "Invalid domain name format: {{ domain }}. Expected format: example.com"
+    success_msg: "Domain name format is valid: {{ domain }}"
+
+- name: Validate domain name length
+  assert:
+    that:
+      - domain | length <= 253
+    fail_msg: "Domain name too long (max 253 characters): {{ domain }}"
+    success_msg: "Domain name length is valid"
+
+- name: Validate domain name does not contain dangerous characters
+  assert:
+    that:
+      - "'|' not in domain"
+      - "'&' not in domain"
+      - "'`' not in domain"
+      - "'$' not in domain"
+      - "';' not in domain"
+    fail_msg: "Domain name contains potentially dangerous characters: {{ domain }}"
+    success_msg: "Domain name passed security validation"

@@ -1,0 +1,120 @@
+---
+# Common task: Write actionlog file in text or JSON format
+# Usage: import_tasks: roles/common/tasks/write_actionlog.yml
+# Variables:
+#   - actionlog_data: Dictionary containing test results (required)
+#   - actionlog_dir: Directory for actionlog files (required)
+#   - actionlog_filename: Base filename without extension (required)
+#   - output_format: "text" or "json" (default: from group_vars or "text")
+
+- name: Set output format
+  set_fact:
+    log_output_format: "{{ output_format | default('text') }}"
+
+- name: Write actionlog file (Text format)
+  copy:
+    content: |
+      ============================================
+      {{ actionlog_data.test_name | upper }} RESULTS
+      ============================================
+      Test Date: {{ actionlog_data.timestamp }}
+      {% if actionlog_data.host is defined %}
+      Host: {{ actionlog_data.host }}
+      {% endif %}
+      
+      STATUS: {{ actionlog_data.status }}
+      MESSAGE: {{ actionlog_data.message }}
+      
+      {% if actionlog_data.details is defined %}
+      DETAILS:
+      {{ actionlog_data.details | to_nice_yaml | indent(2) }}
+      {% endif %}
+      
+      {% if actionlog_data.metrics is defined %}
+      METRICS:
+      {% for key, value in actionlog_data.metrics.items() %}
+      - {{ key }}: {{ value }}
+      {% endfor %}
+      {% endif %}
+      
+      {% if actionlog_data.full_output is defined %}
+      FULL OUTPUT:
+      {{ actionlog_data.full_output }}
+      {% endif %}
+      
+      ============================================
+      VALIDATION:
+      {% if actionlog_data.validation is defined %}
+      {% for check, result in actionlog_data.validation.items() %}
+      - {{ check }}: {{ result }}
+      {% endfor %}
+      {% else %}
+      - Test Status: {{ 'PASS' if actionlog_data.status == 'SUCCESS' else 'FAIL' }}
+      {% endif %}
+      ============================================
+    dest: "{{ actionlog_dir }}/{{ actionlog_filename }}.txt"
+    mode: "{{ actionlog_file_mode | default('0644') }}"
+  delegate_to: localhost
+  when: log_output_format == "text"
+
+- name: Write actionlog file (JSON format)
+  copy:
+    content: "{{ actionlog_data | to_nice_json }}"
+    dest: "{{ actionlog_dir }}/{{ actionlog_filename }}.json"
+    mode: "{{ actionlog_file_mode | default('0644') }}"
+  delegate_to: localhost
+  when: log_output_format == "json"
+
+- name: Write actionlog file (Both formats)
+  copy:
+    content: "{{ actionlog_data | to_nice_json }}"
+    dest: "{{ actionlog_dir }}/{{ actionlog_filename }}.json"
+    mode: "{{ actionlog_file_mode | default('0644') }}"
+  delegate_to: localhost
+  when: log_output_format == "both"
+
+- name: Write actionlog file (Both formats - Text)
+  copy:
+    content: |
+      ============================================
+      {{ actionlog_data.test_name | upper }} RESULTS
+      ============================================
+      Test Date: {{ actionlog_data.timestamp }}
+      {% if actionlog_data.host is defined %}
+      Host: {{ actionlog_data.host }}
+      {% endif %}
+      
+      STATUS: {{ actionlog_data.status }}
+      MESSAGE: {{ actionlog_data.message }}
+      
+      {% if actionlog_data.details is defined %}
+      DETAILS:
+      {{ actionlog_data.details | to_nice_yaml | indent(2) }}
+      {% endif %}
+      
+      {% if actionlog_data.metrics is defined %}
+      METRICS:
+      {% for key, value in actionlog_data.metrics.items() %}
+      - {{ key }}: {{ value }}
+      {% endfor %}
+      {% endif %}
+      
+      {% if actionlog_data.full_output is defined %}
+      FULL OUTPUT:
+      {{ actionlog_data.full_output }}
+      {% endif %}
+      
+      ============================================
+      VALIDATION:
+      {% if actionlog_data.validation is defined %}
+      {% for check, result in actionlog_data.validation.items() %}
+      - {{ check }}: {{ result }}
+      {% endfor %}
+      {% else %}
+      - Test Status: {{ 'PASS' if actionlog_data.status == 'SUCCESS' else 'FAIL' }}
+      {% endif %}
+      ============================================
+    dest: "{{ actionlog_dir }}/{{ actionlog_filename }}.txt"
+    mode: "{{ actionlog_file_mode | default('0644') }}"
+  delegate_to: localhost
+  when: log_output_format == "both"
