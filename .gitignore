@@ -32,6 +32,10 @@ Thumbs.db
 *.log
 *.bak
 
+# Internal notes (do not commit)
+notes.md
+NOTES.md
+
 # Inventory with sensitive data (uncomment if needed)
 # inventories/production.ini
 # inventories/staging.ini
