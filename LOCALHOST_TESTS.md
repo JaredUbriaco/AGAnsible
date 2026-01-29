@@ -325,9 +325,8 @@ All implemented tests have been:
 ## 📚 Related Documentation
 
 - **[README.md](README.md)** - Main project documentation
-- **[PROJECT_VALIDATION_REPORT.md](PROJECT_VALIDATION_REPORT.md)** - Complete validation report
+- **[HowTo.md](HowTo.md)** - Full walkthrough and testing
 - **[playbooks/system/README.md](playbooks/system/README.md)** - System playbooks documentation
-- **[TESTING_CHECKLIST.md](TESTING_CHECKLIST.md)** - Testing checklist
 
 ---
 

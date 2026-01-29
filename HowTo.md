@@ -255,7 +255,7 @@ This script checks:
 - **Commands:** `ansible`, `ansible-playbook`, `python3`, `pip3`, and that at least one of `dig` or `nslookup` is available.
 - **Files:** `playbooks/base/ping_test.yml`, `playbooks/cisco/ssh_test.yml`, `playbooks/system/curl_test.yml`, `playbooks/system/dns_test.yml`, `ansible.cfg`, `inventories/localhost.ini`.
 - **Directories:** `actionlog/` (and optionally existing actionlog subdirs).
-- **Documentation:** `README.md`, `QUICK_START.md`, `REQUIREMENTS.md`.
+- **Documentation:** `README.md`, `HowTo.md`, `REQUIREMENTS.md`.
 - **Syntax:** Runs `ansible-playbook --syntax-check` on `playbooks/base/ping_test.yml`.
 
 Results are written to `actionlog/scripts/verify_<timestamp>.txt`.
@@ -809,10 +809,11 @@ cd ~ && git clone https://github.com/JaredUbriaco/AGAnsible.git && cd AGAnsible 
 |----------|---------|
 | **[README.md](README.md)** | Project overview, table of contents, and main links. |
 | **[WSL_SETUP.md](WSL_SETUP.md)** | Detailed WSL2 setup for Windows. |
-| **[LOCALHOST_TESTS.md](LOCALHOST_TESTS.md)** | List of localhost-capable playbooks and usage. |
-| **[TESTING_CHECKLIST.md](TESTING_CHECKLIST.md)** | Testing and validation checklist. |
+| **[REQUIREMENTS.md](REQUIREMENTS.md)** | System requirements and dependencies. |
+| **[LOCALHOST_TESTS.md](LOCALHOST_TESTS.md)** | Localhost playbooks and `test_localhost.sh` usage. |
 | **[LINTING.md](LINTING.md)** | Linting and code quality. |
-| **[ACTIONLOG_SYSTEM_REVIEW.md](ACTIONLOG_SYSTEM_REVIEW.md)** | Actionlog system design and coverage. |
+| **[ACTIONLOG_SYSTEM_REVIEW.md](ACTIONLOG_SYSTEM_REVIEW.md)** | Actionlog system reference. |
+| **[CLI_USAGE.md](CLI_USAGE.md)** | `agansible` CLI reference. |
 
 ---
 

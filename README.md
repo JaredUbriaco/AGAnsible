@@ -195,12 +195,12 @@ ansible-playbook -i inventories/cisco.ini playbooks/cisco/ssh_test.yml
 AGAnsible/
 ├── README.md                    # This file - main documentation
 ├── HowTo.md                     # Full verbose how-to walkthrough
-├── WSL_SETUP.md                 # Complete WSL setup guide
-├── QUICK_START.md               # Quick reference
-├── QUICK_TEST.md                # Quick testing guide
-├── TESTING_CHECKLIST.md         # Comprehensive testing checklist
-├── REQUIREMENTS.md              # System requirements
-├── COMPLETE_DEPENDENCIES.md     # Complete dependency list
+├── WSL_SETUP.md                 # Complete WSL setup guide (Windows)
+├── REQUIREMENTS.md              # System requirements and dependencies
+├── LOCALHOST_TESTS.md           # Localhost playbooks and test_localhost.sh
+├── LINTING.md                   # Linting and code quality
+├── ACTIONLOG_SYSTEM_REVIEW.md   # Actionlog system reference
+├── CLI_USAGE.md                 # agansible CLI reference
 ├── install.sh                   # Complete installation script
 ├── verify.sh                    # Verification script
 ├── test_all.sh                  # Test all playbooks
@@ -459,9 +459,7 @@ ansible-playbook playbooks/system/dns_test.yml
 
 ### Testing Resources
 
-- **[TESTING_CHECKLIST.md](TESTING_CHECKLIST.md)** - Complete testing checklist
-- **[QUICK_TEST.md](QUICK_TEST.md)** - Quick testing guide
-- **[LOCALHOST_TESTS.md](LOCALHOST_TESTS.md)** - Localhost-only playbooks and `test_localhost.sh` usage
+- **[LOCALHOST_TESTS.md](LOCALHOST_TESTS.md)** - Localhost playbooks and `test_localhost.sh` usage
 
 <a id="configuration"></a>
 ## 🔧 Configuration
@@ -612,15 +610,12 @@ ansible-playbook playbooks/category/my_test.yml
 
 ### Documentation Files
 - **[HowTo.md](HowTo.md)** - Full verbose how-to: setup, run tests, review results (start here for a complete walkthrough)
-- **[WSL_SETUP.md](WSL_SETUP.md)** - Complete WSL2 setup guide
+- **[WSL_SETUP.md](WSL_SETUP.md)** - Complete WSL2 setup guide (Windows users)
 - **[REQUIREMENTS.md](REQUIREMENTS.md)** - System requirements and dependencies
-- **[COMPLETE_DEPENDENCIES.md](COMPLETE_DEPENDENCIES.md)** - Detailed dependency list
-- **[TESTING_CHECKLIST.md](TESTING_CHECKLIST.md)** - Comprehensive testing guide
-- **[QUICK_START.md](QUICK_START.md)** - Quick reference guide
-- **[QUICK_TEST.md](QUICK_TEST.md)** - Quick testing guide
-- **[LOCALHOST_TESTS.md](LOCALHOST_TESTS.md)** - Localhost playbooks and `test_localhost.sh`
+- **[LOCALHOST_TESTS.md](LOCALHOST_TESTS.md)** - Localhost playbooks and `test_localhost.sh` usage
 - **[LINTING.md](LINTING.md)** - Linting and code quality
-- **[ACTIONLOG_SYSTEM_REVIEW.md](ACTIONLOG_SYSTEM_REVIEW.md)** - Actionlog system review
+- **[ACTIONLOG_SYSTEM_REVIEW.md](ACTIONLOG_SYSTEM_REVIEW.md)** - Actionlog system reference
+- **[CLI_USAGE.md](CLI_USAGE.md)** - `agansible` CLI reference
 
 ### External Resources
 - [Ansible Documentation](https://docs.ansible.com/)
