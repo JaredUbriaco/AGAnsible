@@ -1,0 +1,49 @@
+---
+# Ansible Lint Configuration
+# See https://ansible-lint.readthedocs.io/en/latest/configuring.html
+
+# Use default rules
+use_default_rules: true
+
+# Exclude paths
+exclude_paths:
+  - actionlog/
+  - .github/
+  - schemas/
+  - node_modules/
+  - .git/
+
+# Skip list (rules to ignore)
+skip_list:
+  - yaml[truthy]  # Allow yes/no for Ansible
+  - yaml[line-length]  # Handled by yamllint
+  - name[casing]  # Allow various naming conventions
+  - name[template]  # Allow descriptive names
+
+# Tags to run
+tags:
+  - production
+  - safety
+  - yaml
+
+# Verbosity
+verbosity: 1
+
+# Parse errors
+parseable: false
+
+# Quiet mode
+quiet: false
+
+# Colored output
+colored: true
+
+# Rule configuration
+rules:
+  yaml:
+    truthy:
+      allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+  name:
+    template: "{{ rule.id }}:{{ rule.shortdesc | lower }}"
+  line-length:
+    max: 120

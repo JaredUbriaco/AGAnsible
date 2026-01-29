@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/JaredUbriaco/AGAnsible/schemas/dns_test_schema.json",
+  "title": "DNS Test Actionlog Schema",
+  "description": "Schema for validating DNS test actionlog JSON files",
+  "type": "object",
+  "required": ["test_name", "timestamp", "status", "details", "metrics"],
+  "allOf": [
+    {
+      "$ref": "actionlog_schema.json"
+    }
+  ],
+  "properties": {
+    "test_name": {
+      "const": "DNS Test"
+    },
+    "details": {
+      "type": "object",
+      "required": ["target_domain", "dns_server", "dns_tool"],
+      "properties": {
+        "target_domain": {
+          "type": "string",
+          "pattern": "^([a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,}$"
+        },
+        "dns_server": {
+          "type": "string",
+          "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}$"
+        },
+        "dns_tool": {
+          "type": "string",
+          "enum": ["dig", "nslookup"]
+        },
+        "dns_tool_available": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["ip_count"],
+      "properties": {
+        "ip_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "resolved_ips": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}$"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

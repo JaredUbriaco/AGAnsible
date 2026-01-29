@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/JaredUbriaco/AGAnsible/schemas/curl_test_schema.json",
+  "title": "Curl Test Actionlog Schema",
+  "description": "Schema for validating curl test actionlog JSON files",
+  "type": "object",
+  "required": ["test_name", "timestamp", "status", "details", "metrics"],
+  "allOf": [
+    {
+      "$ref": "actionlog_schema.json"
+    }
+  ],
+  "properties": {
+    "test_name": {
+      "const": "Curl Test"
+    },
+    "details": {
+      "type": "object",
+      "properties": {
+        "curl_path": {
+          "type": "string"
+        },
+        "curl_installed": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "success_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "test_results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["url", "expected_status", "actual_status", "success"],
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "expected_status": {
+                "type": "integer"
+              },
+              "actual_status": {
+                "type": ["integer", "string"]
+              },
+              "success": {
+                "type": "boolean"
+              },
+              "response_time": {
+                "type": ["number", "string"]
+              },
+              "content_length": {
+                "type": ["integer", "string"]
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

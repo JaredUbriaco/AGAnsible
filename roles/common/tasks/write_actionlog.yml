@@ -5,11 +5,69 @@
 #   - actionlog_data: Dictionary containing test results (required)
 #   - actionlog_dir: Directory for actionlog files (required)
 #   - actionlog_filename: Base filename without extension (required)
-#   - output_format: "text" or "json" (default: from group_vars or "text")
+#   - output_format: "text", "json", or "both" (default: from group_vars or "text")
+
+- name: Validate required variables
+  assert:
+    that:
+      - actionlog_data is defined
+      - actionlog_dir is defined
+      - actionlog_filename is defined
+      - actionlog_data.test_name is defined
+      - actionlog_data.timestamp is defined
+      - actionlog_data.status is defined
+    fail_msg: "Required variables missing: actionlog_data, actionlog_dir, actionlog_filename, or required fields in actionlog_data"
+    success_msg: "All required variables validated"
 
 - name: Set output format
   set_fact:
     log_output_format: "{{ output_format | default('text') }}"
+  
+- name: Validate output format
+  assert:
+    that:
+      - log_output_format in ['text', 'json', 'both']
+    fail_msg: "Invalid output_format: {{ log_output_format }}. Must be 'text', 'json', or 'both'"
+    success_msg: "Output format validated: {{ log_output_format }}"
+
+- name: Determine schema file based on test name
+  set_fact:
+    schema_file: "{{ playbook_dir }}/../../schemas/{{ actionlog_data.test_name | lower | replace(' ', '_') }}_schema.json"
+  when: 
+    - validate_json_schema | default(false)
+    - log_output_format in ["json", "both"]
+  delegate_to: localhost
+  run_once: true
+  failed_when: false
+
+- name: Use base schema if test-specific schema not found
+  set_fact:
+    schema_file: "{{ playbook_dir }}/../../schemas/actionlog_schema.json"
+  when:
+    - validate_json_schema | default(false)
+    - log_output_format in ["json", "both"]
+    - schema_file is not defined or not (schema_file | exists)
+  delegate_to: localhost
+  run_once: true
+
+- name: Validate JSON data against schema
+  import_tasks: validate_json_schema.yml
+  vars:
+    json_data: "{{ actionlog_data }}"
+    fail_on_error: "{{ validate_json_schema_fail_on_error | default(true) }}"
+  when:
+    - validate_json_schema | default(false)
+    - log_output_format in ["json", "both"]
+    - schema_file is defined
+
+- name: Ensure actionlog directory exists
+  file:
+    path: "{{ actionlog_dir }}"
+    state: directory
+    mode: "{{ actionlog_dir_mode | default('0755') }}"
+  delegate_to: localhost
+  run_once: true
+  failed_when: false
 
 - name: Write actionlog file (Text format)
   copy:
@@ -23,7 +81,7 @@
       {% endif %}
       
       STATUS: {{ actionlog_data.status }}
-      MESSAGE: {{ actionlog_data.message }}
+      MESSAGE: {{ actionlog_data.message | default('No message provided') }}
       
       {% if actionlog_data.details is defined %}
       DETAILS:
@@ -55,7 +113,24 @@
     dest: "{{ actionlog_dir }}/{{ actionlog_filename }}.txt"
     mode: "{{ actionlog_file_mode | default('0644') }}"
   delegate_to: localhost
-  when: log_output_format == "text"
+  when: log_output_format in ["text", "both"]
+  register: text_log_result
+  failed_when: false
+
+- name: Verify text log file was created
+  stat:
+    path: "{{ actionlog_dir }}/{{ actionlog_filename }}.txt"
+  register: text_log_stat
+  delegate_to: localhost
+  when: log_output_format in ["text", "both"]
+  failed_when: false
+
+- name: Warn if text log creation failed
+  debug:
+    msg: "WARNING: Failed to create text actionlog file: {{ actionlog_dir }}/{{ actionlog_filename }}.txt"
+  when:
+    - log_output_format in ["text", "both"]
+    - text_log_stat.stat.exists is not defined or not text_log_stat.stat.exists
 
 - name: Write actionlog file (JSON format)
   copy:
@@ -63,58 +138,51 @@
     dest: "{{ actionlog_dir }}/{{ actionlog_filename }}.json"
     mode: "{{ actionlog_file_mode | default('0644') }}"
   delegate_to: localhost
-  when: log_output_format == "json"
+  when: log_output_format in ["json", "both"]
+  register: json_log_result
+  failed_when: false
 
-- name: Write actionlog file (Both formats)
-  copy:
-    content: "{{ actionlog_data | to_nice_json }}"
-    dest: "{{ actionlog_dir }}/{{ actionlog_filename }}.json"
-    mode: "{{ actionlog_file_mode | default('0644') }}"
+- name: Verify JSON log file was created
+  stat:
+    path: "{{ actionlog_dir }}/{{ actionlog_filename }}.json"
+  register: json_log_stat
   delegate_to: localhost
-  when: log_output_format == "both"
+  when: log_output_format in ["json", "both"]
+  failed_when: false
 
-- name: Write actionlog file (Both formats - Text)
-  copy:
-    content: |
-      ============================================
-      {{ actionlog_data.test_name | upper }} RESULTS
-      ============================================
-      Test Date: {{ actionlog_data.timestamp }}
-      {% if actionlog_data.host is defined %}
-      Host: {{ actionlog_data.host }}
-      {% endif %}
-      
-      STATUS: {{ actionlog_data.status }}
-      MESSAGE: {{ actionlog_data.message }}
-      
-      {% if actionlog_data.details is defined %}
-      DETAILS:
-      {{ actionlog_data.details | to_nice_yaml | indent(2) }}
-      {% endif %}
-      
-      {% if actionlog_data.metrics is defined %}
-      METRICS:
-      {% for key, value in actionlog_data.metrics.items() %}
-      - {{ key }}: {{ value }}
-      {% endfor %}
-      {% endif %}
-      
-      {% if actionlog_data.full_output is defined %}
-      FULL OUTPUT:
-      {{ actionlog_data.full_output }}
-      {% endif %}
-      
-      ============================================
-      VALIDATION:
-      {% if actionlog_data.validation is defined %}
-      {% for check, result in actionlog_data.validation.items() %}
-      - {{ check }}: {{ result }}
-      {% endfor %}
-      {% else %}
-      - Test Status: {{ 'PASS' if actionlog_data.status == 'SUCCESS' else 'FAIL' }}
-      {% endif %}
-      ============================================
-    dest: "{{ actionlog_dir }}/{{ actionlog_filename }}.txt"
-    mode: "{{ actionlog_file_mode | default('0644') }}"
+- name: Warn if JSON log creation failed
+  debug:
+    msg: "WARNING: Failed to create JSON actionlog file: {{ actionlog_dir }}/{{ actionlog_filename }}.json"
+  when:
+    - log_output_format in ["json", "both"]
+    - json_log_stat.stat.exists is not defined or not json_log_stat.stat.exists
+
+- name: Validate JSON file is valid JSON
+  command: python3 -c "import json; json.load(open('{{ actionlog_dir }}/{{ actionlog_filename }}.json'))"
+  register: json_validation
   delegate_to: localhost
-  when: log_output_format == "both"
+  when:
+    - log_output_format in ["json", "both"]
+    - json_log_stat.stat.exists is defined and json_log_stat.stat.exists
+  failed_when: false
+  changed_when: false
+
+- name: Warn if JSON validation failed
+  debug:
+    msg: "WARNING: JSON actionlog file is not valid JSON: {{ actionlog_dir }}/{{ actionlog_filename }}.json"
+  when:
+    - log_output_format in ["json", "both"]
+    - json_log_stat.stat.exists is defined and json_log_stat.stat.exists
+    - json_validation.rc != 0
+
+- name: Final actionlog write verification
+  set_fact:
+    actionlog_write_success: "{{ (text_log_stat.stat.exists is defined and text_log_stat.stat.exists) if log_output_format == 'text' else ((json_log_stat.stat.exists is defined and json_log_stat.stat.exists) if log_output_format == 'json' else ((text_log_stat.stat.exists is defined and text_log_stat.stat.exists) and (json_log_stat.stat.exists is defined and json_log_stat.stat.exists))) }}"
+  delegate_to: localhost
+  run_once: true
+  failed_when: false
+
+- name: Fail if actionlog write was unsuccessful
+  fail:
+    msg: "CRITICAL: Failed to write actionlog file(s). Check permissions and disk space. Directory: {{ actionlog_dir }}"
+  when: not actionlog_write_success | default(false)

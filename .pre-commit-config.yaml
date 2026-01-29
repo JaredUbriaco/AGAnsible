@@ -1,0 +1,72 @@
+---
+# Pre-commit hooks configuration for AGAnsible
+# See https://pre-commit.com for more information
+#
+# Installation:
+#   pip3 install pre-commit
+#   pre-commit install
+#
+# Usage:
+#   pre-commit run --all-files
+
+repos:
+  # YAML linting
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.32.0
+    hooks:
+      - id: yamllint
+        args: ['-c', '.yamllint.yml']
+        files: \.(yaml|yml)$
+        exclude: |
+          (?x)^(
+            actionlog/.*|
+            \.github/.*|
+            schemas/.*
+          )$
+
+  # Ansible linting
+  - repo: https://github.com/ansible/ansible-lint
+    rev: v6.22.0
+    hooks:
+      - id: ansible-lint
+        args: ['--config-file', '.ansible-lint']
+        files: \.(yaml|yml)$
+        exclude: |
+          (?x)^(
+            actionlog/.*|
+            \.github/.*|
+            schemas/.*|
+            requirements\.yml|
+            \.yamllint\.yml
+          )$
+
+  # Trailing whitespace
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: \.(md|txt)$
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: ['--unsafe']
+      - id: check-json
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+      - id: check-executables-have-shebangs
+
+  # JSON Schema validation (custom hook)
+  - repo: local
+    hooks:
+      - id: validate-json-schemas
+        name: Validate JSON files against schemas
+        entry: scripts/validate_json_schemas.sh
+        language: system
+        files: \.json$
+        pass_filenames: true
+        exclude: |
+          (?x)^(
+            schemas/.*|
+            node_modules/.*
+          )$

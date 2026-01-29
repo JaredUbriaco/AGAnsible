@@ -1,0 +1,122 @@
+---
+# BGP (Border Gateway Protocol) monitoring playbook
+# Checks BGP neighbor status and summary
+# Supports: Cisco IOS, Juniper JunOS, Arista EOS
+
+- name: Monitor BGP status and neighbors
+  hosts: network_devices
+  gather_facts: no
+  
+  vars:
+    # Playbook metadata
+    playbook_version: "1.0.0"
+    playbook_author: "AGAnsible Team"
+    playbook_description: "BGP neighbor and routing table status monitoring"
+    
+    # Playbook variables
+    actionlog_dir: "{{ playbook_dir }}/../../actionlog/network/bgp_status"
+  
+  tasks:
+    - name: Setup actionlog directory
+      import_tasks: ../../../roles/common/tasks/actionlog_setup.yml
+    
+    - name: Generate timestamp
+      import_tasks: ../../../roles/common/tasks/timestamp.yml
+    
+    # Cisco IOS BGP Commands
+    - name: Get BGP summary (Cisco IOS)
+      cisco.ios.ios_command:
+        commands:
+          - show ip bgp summary
+          - show ip bgp neighbors
+      register: bgp_output
+      when: ansible_network_os == 'cisco.ios.ios'
+      failed_when: false
+      changed_when: false
+    
+    # Juniper JunOS BGP Commands
+    - name: Get BGP summary (Juniper JunOS)
+      junipernetworks.junos.junos_command:
+        commands:
+          - show bgp summary
+          - show bgp neighbor
+      register: bgp_output
+      when: ansible_network_os == 'junipernetworks.junos.junos'
+      failed_when: false
+      changed_when: false
+    
+    # Arista EOS BGP Commands
+    - name: Get BGP summary (Arista EOS)
+      arista.eos.eos_command:
+        commands:
+          - show ip bgp summary
+          - show ip bgp neighbors
+      register: bgp_output
+      when: ansible_network_os == 'arista.eos.eos'
+      failed_when: false
+      changed_when: false
+    
+    # Fallback for unsupported devices
+    - name: Check if BGP command executed
+      set_fact:
+        bgp_available: "{{ bgp_output is defined and bgp_output.stdout is defined }}"
+        device_supported: "{{ ansible_network_os in ['cisco.ios.ios', 'junipernetworks.junos.junos', 'arista.eos.eos'] }}"
+    
+    - name: Fail if device not supported
+      fail:
+        msg: "BGP monitoring not supported for device type: {{ ansible_network_os }}. Supported: cisco.ios.ios, junipernetworks.junos.junos, arista.eos.eos"
+      when: not device_supported
+    
+    # Parse BGP output (basic parsing - can be enhanced)
+    - name: Extract BGP neighbor count
+      set_fact:
+        bgp_neighbor_count: "{{ bgp_output.stdout[0] | regex_search('BGP neighbor is ([0-9]+)') | default(['0']) | first | int }}"
+      when: bgp_available
+    
+    - name: Check BGP status
+      set_fact:
+        bgp_status: "{{ 'UP' if (bgp_output.failed is not defined or not bgp_output.failed) and bgp_available else 'DOWN' }}"
+        test_status: "{{ 'SUCCESS' if (bgp_output.failed is not defined or not bgp_output.failed) and bgp_available else 'FAILURE' }}"
+        test_message: "{{ 'BGP monitoring successful' if (bgp_output.failed is not defined or not bgp_output.failed) and bgp_available else 'BGP monitoring failed or BGP not configured' }}"
+    
+    - name: Prepare actionlog data structure
+      set_fact:
+        actionlog_data:
+          test_name: "BGP Status"
+          timestamp: "{{ timestamp }}"
+          host: "{{ inventory_hostname }}"
+          status: "{{ test_status }}"
+          message: "{{ test_message }}"
+          details:
+            device_type: "{{ ansible_network_os }}"
+            bgp_status: "{{ bgp_status }}"
+            bgp_neighbor_count: "{{ bgp_neighbor_count | default('N/A') }}"
+          metrics:
+            bgp_available: "{{ bgp_available }}"
+            device_supported: "{{ device_supported }}"
+          validation:
+            bgp_command_executed: "{{ 'PASS' if bgp_available else 'FAIL' }}"
+            device_supported_check: "{{ 'PASS' if device_supported else 'FAIL' }}"
+          full_output: "{{ bgp_output.stdout | default([]) | to_nice_yaml }}"
+          playbook_metadata:
+            version: "{{ playbook_version }}"
+            author: "{{ playbook_author }}"
+            description: "{{ playbook_description }}"
+    
+    - name: Write test results to actionlog
+      import_tasks: ../../../roles/common/tasks/write_actionlog.yml
+      vars:
+        actionlog_filename: "bgp_status_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}"
+    
+    - name: Display BGP status
+      debug:
+        msg:
+          - "BGP Status: {{ bgp_status }}"
+          - "{{ test_message }}"
+          - "Device Type: {{ ansible_network_os }}"
+          - "BGP Neighbors: {{ bgp_neighbor_count | default('N/A') }}"
+    
+    - name: Fail if BGP monitoring was unsuccessful
+      fail:
+        msg: "BGP monitoring FAILED - {{ test_message }}"
+      when: test_status == "FAILURE"

@@ -73,6 +73,17 @@
             author: "{{ playbook_author }}"
             description: "{{ playbook_description }}"
     
+    - name: Format as API response (if api_response_format is enabled)
+      import_tasks: ../../../roles/common/tasks/api_response_format.yml
+      vars:
+        api_data:
+          playbook: "ping_test.yml"
+          execution_time: "{{ ansible_date_time.epoch | int }}"
+          results: "{{ actionlog_data }}"
+        api_status: "{{ 'success' if test_status == 'SUCCESS' else 'error' }}"
+        playbook_file: "playbooks/base/ping_test.yml"
+      when: api_response_format | default(false)
+    
     - name: Write test results to actionlog
       import_tasks: ../../../roles/common/tasks/write_actionlog.yml
       vars:

@@ -1,0 +1,56 @@
+---
+# Ansible Collections Requirements
+# Install with: ansible-galaxy collection install -r requirements.yml
+
+collections:
+  # Network Common
+  - name: ansible.netcommon
+    version: ">=3.0.0"
+    source: https://galaxy.ansible.com
+
+  # Cisco Collections
+  - name: cisco.ios
+    version: ">=2.0.0"
+    source: https://galaxy.ansible.com
+  
+  - name: cisco.nxos
+    version: ">=2.0.0"
+    source: https://galaxy.ansible.com
+  
+  - name: cisco.asa
+    version: ">=2.0.0"
+    source: https://galaxy.ansible.com
+
+  # Juniper
+  - name: junipernetworks.junos
+    version: ">=3.0.0"
+    source: https://galaxy.ansible.com
+
+  # Arista
+  - name: arista.eos
+    version: ">=5.0.0"
+    source: https://galaxy.ansible.com
+
+  # Palo Alto
+  - name: paloaltonetworks.panos
+    version: ">=2.0.0"
+    source: https://galaxy.ansible.com
+
+  # Fortinet
+  - name: fortinet.fortios
+    version: ">=2.0.0"
+    source: https://galaxy.ansible.com
+
+  # F5 Networks
+  - name: f5networks.f5_modules
+    version: ">=2.0.0"
+    source: https://galaxy.ansible.com
+
+  # Community Collections
+  - name: community.network
+    version: ">=5.0.0"
+    source: https://galaxy.ansible.com
+  
+  - name: community.general
+    version: ">=7.0.0"
+    source: https://galaxy.ansible.com

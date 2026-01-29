@@ -1,0 +1,64 @@
+---
+# Common task: Validate JSON data against schema
+# Usage: import_tasks: roles/common/tasks/validate_json_schema.yml
+# Variables:
+#   - json_data: Dictionary containing JSON data to validate (required)
+#   - schema_file: Path to JSON schema file (required)
+#   - fail_on_error: Whether to fail on validation errors (default: true)
+
+- name: Check if jsonschema Python package is available
+  command: python3 -c "import jsonschema"
+  register: jsonschema_check
+  changed_when: false
+  failed_when: false
+  delegate_to: localhost
+
+- name: Fail if jsonschema is not installed
+  fail:
+    msg: "jsonschema Python package is required for JSON schema validation. Install with: pip3 install jsonschema"
+  when: jsonschema_check.rc != 0 and fail_on_error | default(true)
+
+- name: Validate JSON data against schema
+  command: >
+    python3 -c "
+    import json
+    import jsonschema
+    import sys
+    
+    # Load schema
+    with open('{{ schema_file }}', 'r') as f:
+        schema = json.load(f)
+    
+    # Load data
+    data = {{ json_data | to_json }}
+    
+    # Validate
+    try:
+        jsonschema.validate(instance=data, schema=schema)
+        print('JSON validation successful')
+        sys.exit(0)
+    except jsonschema.ValidationError as e:
+        print(f'JSON validation failed: {e.message}')
+        print(f'Path: {e.json_path}')
+        sys.exit(1)
+    except Exception as e:
+        print(f'Error during validation: {str(e)}')
+        sys.exit(1)
+    "
+  register: validation_result
+  changed_when: false
+  delegate_to: localhost
+  when: jsonschema_check.rc == 0
+
+- name: Display validation result
+  debug:
+    msg: "{{ validation_result.stdout }}"
+  when: jsonschema_check.rc == 0
+
+- name: Fail if validation failed
+  fail:
+    msg: "JSON schema validation failed: {{ validation_result.stderr | default(validation_result.stdout) }}"
+  when: 
+    - jsonschema_check.rc == 0
+    - validation_result.rc != 0
+    - fail_on_error | default(true)

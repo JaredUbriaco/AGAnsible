@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/JaredUbriaco/AGAnsible/schemas/ping_test_schema.json",
+  "title": "Ping Test Actionlog Schema",
+  "description": "Schema for validating ping test actionlog JSON files",
+  "type": "object",
+  "required": ["test_name", "timestamp", "status", "details", "metrics"],
+  "allOf": [
+    {
+      "$ref": "actionlog_schema.json"
+    }
+  ],
+  "properties": {
+    "test_name": {
+      "const": "Ping Test"
+    },
+    "details": {
+      "type": "object",
+      "required": ["target_host", "ping_count"],
+      "properties": {
+        "target_host": {
+          "type": "string",
+          "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}$|^[a-zA-Z0-9.-]+$"
+        },
+        "ping_count": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["packet_loss_percent", "packets_transmitted", "packets_received"],
+      "properties": {
+        "packet_loss_percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "packets_transmitted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "packets_received": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

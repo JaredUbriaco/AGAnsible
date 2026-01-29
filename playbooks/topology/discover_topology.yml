@@ -1,0 +1,168 @@
+---
+# Network Topology Discovery Playbook
+# Discovers network topology using CDP/LLDP neighbor information
+# Supports: Cisco IOS, Juniper JunOS, Arista EOS
+
+- name: Discover network topology using CDP/LLDP
+  hosts: network_devices
+  gather_facts: no
+  
+  vars:
+    # Playbook metadata
+    playbook_version: "1.0.0"
+    playbook_author: "AGAnsible Team"
+    playbook_description: "Network topology discovery using CDP/LLDP neighbor protocols"
+    
+    # Playbook variables
+    actionlog_dir: "{{ playbook_dir }}/../../actionlog/topology/discover_topology"
+    topology_output_dir: "{{ playbook_dir }}/../../topology"
+    discovery_protocol: "cdp"  # Options: cdp, lldp, auto
+  
+  tasks:
+    - name: Setup actionlog directory
+      import_tasks: ../../../roles/common/tasks/actionlog_setup.yml
+    
+    - name: Create topology output directory
+      file:
+        path: "{{ topology_output_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: true
+    
+    - name: Generate timestamp
+      import_tasks: ../../../roles/common/tasks/timestamp.yml
+    
+    # Cisco IOS CDP Discovery
+    - name: Get CDP neighbors detail (Cisco IOS)
+      cisco.ios.ios_command:
+        commands:
+          - show cdp neighbors detail
+      register: cdp_output
+      when: 
+        - ansible_network_os == 'cisco.ios.ios'
+        - discovery_protocol in ['cdp', 'auto']
+      failed_when: false
+      changed_when: false
+    
+    # Cisco IOS LLDP Discovery
+    - name: Get LLDP neighbors detail (Cisco IOS)
+      cisco.ios.ios_command:
+        commands:
+          - show lldp neighbors detail
+      register: lldp_output
+      when:
+        - ansible_network_os == 'cisco.ios.ios'
+        - discovery_protocol in ['lldp', 'auto']
+        - cdp_output.failed is defined and cdp_output.failed
+      failed_when: false
+      changed_when: false
+    
+    # Juniper JunOS LLDP Discovery
+    - name: Get LLDP neighbors detail (Juniper JunOS)
+      junipernetworks.junos.junos_command:
+        commands:
+          - show lldp neighbors detail
+      register: lldp_output
+      when: ansible_network_os == 'junipernetworks.junos.junos'
+      failed_when: false
+      changed_when: false
+    
+    # Arista EOS LLDP Discovery
+    - name: Get LLDP neighbors detail (Arista EOS)
+      arista.eos.eos_command:
+        commands:
+          - show lldp neighbors detail
+      register: lldp_output
+      when: ansible_network_os == 'arista.eos.eos'
+      failed_when: false
+      changed_when: false
+    
+    # Determine which protocol was used
+    - name: Set discovery protocol used
+      set_fact:
+        protocol_used: "{{ 'cdp' if (cdp_output is defined and cdp_output.failed is not defined or not cdp_output.failed) else 'lldp' }}"
+        neighbor_output: "{{ cdp_output.stdout[0] if (cdp_output is defined and cdp_output.failed is not defined or not cdp_output.failed) else (lldp_output.stdout[0] if lldp_output is defined else '') }}"
+        discovery_successful: "{{ (cdp_output is defined and (cdp_output.failed is not defined or not cdp_output.failed)) or (lldp_output is defined and (lldp_output.failed is not defined or not lldp_output.failed)) }}"
+    
+    # Use custom module to parse topology
+    - name: Parse network topology
+      network_topology:
+        neighbor_output: "{{ neighbor_output }}"
+        protocol: "{{ protocol_used }}"
+        device_name: "{{ inventory_hostname }}"
+      register: topology_result
+      when: discovery_successful
+      delegate_to: localhost
+    
+    # Fallback: Basic parsing if module not available
+    - name: Extract neighbor count (fallback)
+      set_fact:
+        topology_result:
+          topology:
+            device: "{{ inventory_hostname }}"
+            protocol: "{{ protocol_used }}"
+            neighbor_count: "{{ neighbor_output | regex_findall('Device ID:|System Name:') | length }}"
+            neighbors: []
+      when: 
+        - discovery_successful
+        - topology_result is not defined or topology_result.failed is defined
+    
+    - name: Validate topology discovery
+      set_fact:
+        test_status: "{{ 'SUCCESS' if discovery_successful else 'FAILURE' }}"
+        test_message: "{{ 'Topology discovery successful' if discovery_successful else 'Topology discovery failed - CDP/LLDP not available or not configured' }}"
+        topology_data: "{{ topology_result.topology if topology_result is defined and topology_result.topology is defined else {} }}"
+    
+    - name: Export topology to JSON file
+      copy:
+        content: "{{ topology_data | to_nice_json }}"
+        dest: "{{ topology_output_dir }}/topology_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.json"
+        mode: '0644'
+      delegate_to: localhost
+      when: discovery_successful
+    
+    - name: Prepare actionlog data structure
+      set_fact:
+        actionlog_data:
+          test_name: "Topology Discovery"
+          timestamp: "{{ timestamp }}"
+          host: "{{ inventory_hostname }}"
+          status: "{{ test_status }}"
+          message: "{{ test_message }}"
+          details:
+            device_type: "{{ ansible_network_os }}"
+            protocol_used: "{{ protocol_used }}"
+            neighbor_count: "{{ topology_data.neighbor_count | default(0) }}"
+          metrics:
+            discovery_successful: "{{ discovery_successful }}"
+            neighbor_count: "{{ topology_data.neighbor_count | default(0) }}"
+            protocol_available: "{{ protocol_used }}"
+          validation:
+            discovery_successful: "{{ 'PASS' if discovery_successful else 'FAIL' }}"
+            neighbors_found: "{{ 'PASS' if (topology_data.neighbor_count | default(0) | int) > 0 else 'WARN' }}"
+          full_output: "{{ neighbor_output }}"
+          topology_data: "{{ topology_data }}"
+          playbook_metadata:
+            version: "{{ playbook_version }}"
+            author: "{{ playbook_author }}"
+            description: "{{ playbook_description }}"
+    
+    - name: Write test results to actionlog
+      import_tasks: ../../../roles/common/tasks/write_actionlog.yml
+      vars:
+        actionlog_filename: "topology_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}"
+    
+    - name: Display topology discovery results
+      debug:
+        msg:
+          - "Discovery Status: {{ test_status }}"
+          - "{{ test_message }}"
+          - "Protocol Used: {{ protocol_used }}"
+          - "Neighbors Found: {{ topology_data.neighbor_count | default(0) }}"
+          - "Topology saved to: {{ topology_output_dir }}/topology_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.json"
+    
+    - name: Fail if topology discovery was unsuccessful
+      fail:
+        msg: "Topology discovery FAILED - {{ test_message }}"
+      when: test_status == "FAILURE"

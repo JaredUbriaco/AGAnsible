@@ -1,0 +1,66 @@
+---
+# Common task: Format response as standardized JSON API format
+# Usage: import_tasks: roles/common/tasks/api_response_format.yml
+# Variables:
+#   - api_data: Dictionary containing the actual response data (required)
+#   - request_id: Optional request ID for tracking (default: generated)
+#   - api_version: API version (default: "1.0")
+# Result: Sets 'api_response' fact with standardized format
+
+- name: Generate request ID if not provided
+  set_fact:
+    request_id: "{{ request_id | default(ansible_date_time.epoch | string + '-' + (1000 | random | string)) }}"
+  when: request_id is not defined
+  delegate_to: localhost
+  run_once: true
+
+- name: Get Ansible version
+  command: ansible --version
+  register: ansible_version_output
+  changed_when: false
+  failed_when: false
+  delegate_to: localhost
+  run_once: true
+
+- name: Extract Ansible version
+  set_fact:
+    ansible_version: "{{ ansible_version_output.stdout_lines[0] | regex_search('ansible ([0-9.]+)') | default(['unknown']) | first }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: Get Python version
+  command: python3 --version
+  register: python_version_output
+  changed_when: false
+  failed_when: false
+  delegate_to: localhost
+  run_once: true
+
+- name: Extract Python version
+  set_fact:
+    python_version: "{{ python_version_output.stdout | regex_search('Python ([0-9.]+)') | default(['unknown']) | first }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: Generate timestamp
+  command: date -u +"%Y-%m-%dT%H:%M:%SZ"
+  register: api_timestamp_result
+  changed_when: false
+  delegate_to: localhost
+  run_once: true
+
+- name: Format API response
+  set_fact:
+    api_response:
+      api_version: "{{ api_version | default('1.0') }}"
+      timestamp: "{{ api_timestamp_result.stdout }}"
+      request_id: "{{ request_id }}"
+      status: "{{ api_status | default('success') }}"
+      data: "{{ api_data }}"
+      metadata:
+        ansible_version: "{{ ansible_version }}"
+        python_version: "{{ python_version }}"
+        host: "{{ inventory_hostname }}"
+        playbook: "{{ playbook_file | default('unknown') }}"
+  delegate_to: localhost
+  run_once: true

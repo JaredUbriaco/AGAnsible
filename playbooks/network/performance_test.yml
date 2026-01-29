@@ -1,0 +1,214 @@
+---
+# Network Performance Testing Playbook
+# Measures latency, jitter, packet loss, throughput, and bandwidth utilization
+# Supports: Any system with ping, iperf3, and network interface tools
+
+- name: Network performance testing
+  hosts: all
+  gather_facts: no
+  
+  vars:
+    # Playbook metadata
+    playbook_version: "1.0.0"
+    playbook_author: "AGAnsible Team"
+    playbook_description: "Comprehensive network performance testing including latency, jitter, packet loss, and throughput"
+    
+    # Playbook variables
+    actionlog_dir: "{{ playbook_dir }}/../../actionlog/network/performance_test"
+    target_host: "{{ ping_default_target | default('8.8.8.8') }}"
+    ping_count: 100
+    ping_interval: 0.1
+    test_duration: 60  # seconds for throughput test
+    interface: "eth0"  # Network interface for bandwidth monitoring
+  
+  tasks:
+    - name: Setup actionlog directory
+      import_tasks: ../../../roles/common/tasks/actionlog_setup.yml
+    
+    - name: Generate timestamp
+      import_tasks: ../../../roles/common/tasks/timestamp.yml
+    
+    # Check for required tools
+    - name: Check if ping is available
+      command: which ping
+      register: ping_check
+      changed_when: false
+      failed_when: false
+    
+    - name: Check if iperf3 is available
+      command: which iperf3
+      register: iperf3_check
+      changed_when: false
+      failed_when: false
+    
+    - name: Validate tools availability
+      set_fact:
+        ping_available: "{{ ping_check.rc == 0 }}"
+        iperf3_available: "{{ iperf3_check.rc == 0 }}"
+        tools_available: "{{ ping_check.rc == 0 }}"
+    
+    - name: Fail if ping is not available
+      fail:
+        msg: "ping command is required but not found. Install with: apt-get install iputils-ping"
+      when: not ping_available
+    
+    # Latency and Packet Loss Test
+    - name: Measure latency and packet loss
+      command: ping -c {{ ping_count }} -i {{ ping_interval }} {{ target_host }}
+      register: ping_result
+      failed_when: false
+      changed_when: false
+      when: ping_available
+    
+    # Parse ping results
+    - name: Extract latency statistics
+      set_fact:
+        latency_match: "{{ ping_result.stdout | regex_search('min/avg/max.*= ([0-9.]+)/([0-9.]+)/([0-9.]+)') | default([]) }}"
+        packet_loss_match: "{{ ping_result.stdout | regex_search('([0-9]+)% packet loss') | default(['100']) }}"
+        packets_transmitted_match: "{{ ping_result.stdout | regex_search('([0-9]+) packets transmitted') | default(['0']) }}"
+        packets_received_match: "{{ ping_result.stdout | regex_search('([0-9]+) received') | default(['0']) }}"
+      when: ping_available
+    
+    - name: Calculate latency metrics
+      set_fact:
+        latency_min: "{{ (latency_match[0] | default('0')) | float }}"
+        latency_avg: "{{ (latency_match[1] | default('0')) | float }}"
+        latency_max: "{{ (latency_match[2] | default('0')) | float }}"
+        packet_loss: "{{ (packet_loss_match[0] | default('100')) | int }}"
+        packets_transmitted: "{{ (packets_transmitted_match[0] | default('0')) | int }}"
+        packets_received: "{{ (packets_received_match[0] | default('0')) | int }}"
+      when: ping_available
+    
+    # Calculate jitter (standard deviation approximation from min/avg/max)
+    - name: Calculate jitter
+      set_fact:
+        jitter: "{{ ((latency_max - latency_min) / 2) | round(2) }}"
+      when: ping_available
+    
+    # Throughput Test (if iperf3 is available)
+    - name: Measure throughput with iperf3
+      command: timeout {{ test_duration }} iperf3 -c {{ target_host }} -t {{ test_duration }} --json
+      register: iperf3_result
+      failed_when: false
+      changed_when: false
+      when: 
+        - iperf3_available
+        - ping_available
+      ignore_errors: true
+    
+    # Parse iperf3 results
+    - name: Extract throughput metrics
+      set_fact:
+        throughput_mbps: "{{ (iperf3_result.stdout | from_json).end.sum_sent.bits_per_second | default(0) | int / 1000000 | round(2) }}"
+        throughput_available: "{{ iperf3_result.rc == 0 and iperf3_result.stdout is defined }}"
+      when: 
+        - iperf3_available
+        - iperf3_result.stdout is defined
+      failed_when: false
+    
+    # Bandwidth Utilization (interface statistics)
+    - name: Get interface statistics
+      command: cat /sys/class/net/{{ interface }}/statistics/rx_bytes
+      register: rx_bytes_start
+      changed_when: false
+      failed_when: false
+      when: ping_available
+    
+    - name: Wait for measurement period
+      pause:
+        seconds: 5
+    
+    - name: Get interface statistics (end)
+      command: cat /sys/class/net/{{ interface }}/statistics/rx_bytes
+      register: rx_bytes_end
+      changed_when: false
+      failed_when: false
+      when: ping_available
+    
+    - name: Calculate bandwidth utilization
+      set_fact:
+        bytes_transferred: "{{ (rx_bytes_end.stdout | default('0') | int) - (rx_bytes_start.stdout | default('0') | int) }}"
+        bandwidth_mbps: "{{ (bytes_transferred | int * 8 / 5 / 1000000) | round(2) }}"
+      when: 
+        - ping_available
+        - rx_bytes_start.stdout is defined
+        - rx_bytes_end.stdout is defined
+    
+    # Interface Errors
+    - name: Get interface errors
+      command: cat /sys/class/net/{{ interface }}/statistics/rx_errors
+      register: rx_errors
+      changed_when: false
+      failed_when: false
+      when: ping_available
+    
+    - name: Get interface dropped packets
+      command: cat /sys/class/net/{{ interface }}/statistics/rx_dropped
+      register: rx_dropped
+      changed_when: false
+      failed_when: false
+      when: ping_available
+    
+    # Validate performance test success
+    - name: Validate performance test
+      set_fact:
+        test_status: "{{ 'SUCCESS' if (ping_available and packets_received > 0) else 'FAILURE' }}"
+        test_message: "{{ 'Performance test completed successfully' if (ping_available and packets_received > 0) else 'Performance test failed - no packets received' }}"
+    
+    - name: Prepare actionlog data structure
+      set_fact:
+        actionlog_data:
+          test_name: "Performance Test"
+          timestamp: "{{ timestamp }}"
+          host: "{{ inventory_hostname }}"
+          status: "{{ test_status }}"
+          message: "{{ test_message }}"
+          details:
+            target_host: "{{ target_host }}"
+            ping_count: "{{ ping_count }}"
+            interface: "{{ interface }}"
+            test_duration: "{{ test_duration }}"
+          metrics:
+            latency_min_ms: "{{ latency_min | default('N/A') }}"
+            latency_avg_ms: "{{ latency_avg | default('N/A') }}"
+            latency_max_ms: "{{ latency_max | default('N/A') }}"
+            jitter_ms: "{{ jitter | default('N/A') }}"
+            packet_loss_percent: "{{ packet_loss | default('N/A') }}"
+            packets_transmitted: "{{ packets_transmitted | default('N/A') }}"
+            packets_received: "{{ packets_received | default('N/A') }}"
+            throughput_mbps: "{{ throughput_mbps | default('N/A') }}"
+            bandwidth_utilization_mbps: "{{ bandwidth_mbps | default('N/A') }}"
+            interface_errors: "{{ rx_errors.stdout | default('N/A') }}"
+            interface_dropped: "{{ rx_dropped.stdout | default('N/A') }}"
+          validation:
+            ping_available: "{{ 'PASS' if ping_available else 'FAIL' }}"
+            packets_received: "{{ 'PASS' if (packets_received | default(0) | int) > 0 else 'FAIL' }}"
+            low_latency: "{{ 'PASS' if (latency_avg | default(999) | float) < 50 else 'WARN' }}"
+            low_packet_loss: "{{ 'PASS' if (packet_loss | default(100) | int) < 1 else 'WARN' }}"
+            throughput_measured: "{{ 'PASS' if (throughput_available | default(false)) else 'SKIP' }}"
+          full_output: "{{ ping_result.stdout | default('N/A') }}"
+          playbook_metadata:
+            version: "{{ playbook_version }}"
+            author: "{{ playbook_author }}"
+            description: "{{ playbook_description }}"
+    
+    - name: Write test results to actionlog
+      import_tasks: ../../../roles/common/tasks/write_actionlog.yml
+      vars:
+        actionlog_filename: "performance_test_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}"
+    
+    - name: Display performance test results
+      debug:
+        msg:
+          - "Performance Test Status: {{ test_status }}"
+          - "{{ test_message }}"
+          - "Latency: Min={{ latency_min | default('N/A') }}ms, Avg={{ latency_avg | default('N/A') }}ms, Max={{ latency_max | default('N/A') }}ms"
+          - "Jitter: {{ jitter | default('N/A') }}ms"
+          - "Packet Loss: {{ packet_loss | default('N/A') }}%"
+          - "Throughput: {{ throughput_mbps | default('N/A') }} Mbps"
+          - "Bandwidth Utilization: {{ bandwidth_mbps | default('N/A') }} Mbps"
+    
+    - name: Fail if performance test was unsuccessful
+      fail:
+        msg: "Performance test FAILED - {{ test_message }}"
+      when: test_status == "FAILURE"

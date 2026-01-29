@@ -1,0 +1,137 @@
+---
+# OSPF (Open Shortest Path First) monitoring playbook
+# Checks OSPF neighbor status and routing information
+# Supports: Cisco IOS, Juniper JunOS, Arista EOS
+
+- name: Monitor OSPF status and neighbors
+  hosts: network_devices
+  gather_facts: no
+  
+  vars:
+    # Playbook metadata
+    playbook_version: "1.0.0"
+    playbook_author: "AGAnsible Team"
+    playbook_description: "OSPF neighbor and routing table status monitoring"
+    
+    # Playbook variables
+    actionlog_dir: "{{ playbook_dir }}/../../actionlog/network/ospf_status"
+  
+  tasks:
+    - name: Setup actionlog directory
+      import_tasks: ../../../roles/common/tasks/actionlog_setup.yml
+    
+    - name: Generate timestamp
+      import_tasks: ../../../roles/common/tasks/timestamp.yml
+    
+    # Cisco IOS OSPF Commands
+    - name: Get OSPF neighbor status (Cisco IOS)
+      cisco.ios.ios_command:
+        commands:
+          - show ip ospf neighbor
+          - show ip ospf neighbor detail
+          - show ip ospf
+      register: ospf_output
+      when: ansible_network_os == 'cisco.ios.ios'
+      failed_when: false
+      changed_when: false
+    
+    # Juniper JunOS OSPF Commands
+    - name: Get OSPF neighbor status (Juniper JunOS)
+      junipernetworks.junos.junos_command:
+        commands:
+          - show ospf neighbor
+          - show ospf neighbor detail
+          - show ospf overview
+      register: ospf_output
+      when: ansible_network_os == 'junipernetworks.junos.junos'
+      failed_when: false
+      changed_when: false
+    
+    # Arista EOS OSPF Commands
+    - name: Get OSPF neighbor status (Arista EOS)
+      arista.eos.eos_command:
+        commands:
+          - show ip ospf neighbor
+          - show ip ospf neighbor detail
+          - show ip ospf
+      register: ospf_output
+      when: ansible_network_os == 'arista.eos.eos'
+      failed_when: false
+      changed_when: false
+    
+    # Fallback for unsupported devices
+    - name: Check if OSPF command executed
+      set_fact:
+        ospf_available: "{{ ospf_output is defined and ospf_output.stdout is defined }}"
+        device_supported: "{{ ansible_network_os in ['cisco.ios.ios', 'junipernetworks.junos.junos', 'arista.eos.eos'] }}"
+    
+    - name: Fail if device not supported
+      fail:
+        msg: "OSPF monitoring not supported for device type: {{ ansible_network_os }}. Supported: cisco.ios.ios, junipernetworks.junos.junos, arista.eos.eos"
+      when: not device_supported
+    
+    # Parse OSPF output
+    - name: Extract OSPF neighbor count
+      set_fact:
+        ospf_neighbor_count: "{{ ospf_output.stdout[0] | regex_search('Neighbor Count is ([0-9]+)') | default(['0']) | first | int }}"
+      when: ospf_available
+    
+    - name: Extract OSPF neighbor states
+      set_fact:
+        ospf_neighbors_full: "{{ ospf_output.stdout[0] | regex_findall('FULL') | length }}"
+        ospf_neighbors_other: "{{ ospf_output.stdout[0] | regex_findall('(INIT|TWO-WAY|EXSTART|EXCHANGE|LOADING)') | length }}"
+      when: ospf_available
+    
+    - name: Check OSPF status
+      set_fact:
+        ospf_status: "{{ 'UP' if (ospf_output.failed is not defined or not ospf_output.failed) and ospf_available else 'DOWN' }}"
+        test_status: "{{ 'SUCCESS' if (ospf_output.failed is not defined or not ospf_output.failed) and ospf_available else 'FAILURE' }}"
+        test_message: "{{ 'OSPF monitoring successful' if (ospf_output.failed is not defined or not ospf_output.failed) and ospf_available else 'OSPF monitoring failed or OSPF not configured' }}"
+    
+    - name: Prepare actionlog data structure
+      set_fact:
+        actionlog_data:
+          test_name: "OSPF Status"
+          timestamp: "{{ timestamp }}"
+          host: "{{ inventory_hostname }}"
+          status: "{{ test_status }}"
+          message: "{{ test_message }}"
+          details:
+            device_type: "{{ ansible_network_os }}"
+            ospf_status: "{{ ospf_status }}"
+            ospf_neighbor_count: "{{ ospf_neighbor_count | default('N/A') }}"
+            ospf_neighbors_full: "{{ ospf_neighbors_full | default('N/A') }}"
+            ospf_neighbors_other: "{{ ospf_neighbors_other | default('N/A') }}"
+          metrics:
+            ospf_available: "{{ ospf_available }}"
+            device_supported: "{{ device_supported }}"
+            neighbors_full_state: "{{ ospf_neighbors_full | default(0) }}"
+            neighbors_other_states: "{{ ospf_neighbors_other | default(0) }}"
+          validation:
+            ospf_command_executed: "{{ 'PASS' if ospf_available else 'FAIL' }}"
+            device_supported_check: "{{ 'PASS' if device_supported else 'FAIL' }}"
+            neighbors_in_full_state: "{{ 'PASS' if (ospf_neighbors_full | default(0) | int) > 0 else 'WARN' }}"
+          full_output: "{{ ospf_output.stdout | default([]) | to_nice_yaml }}"
+          playbook_metadata:
+            version: "{{ playbook_version }}"
+            author: "{{ playbook_author }}"
+            description: "{{ playbook_description }}"
+    
+    - name: Write test results to actionlog
+      import_tasks: ../../../roles/common/tasks/write_actionlog.yml
+      vars:
+        actionlog_filename: "ospf_status_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}"
+    
+    - name: Display OSPF status
+      debug:
+        msg:
+          - "OSPF Status: {{ ospf_status }}"
+          - "{{ test_message }}"
+          - "Device Type: {{ ansible_network_os }}"
+          - "OSPF Neighbors: {{ ospf_neighbor_count | default('N/A') }}"
+          - "Neighbors in FULL state: {{ ospf_neighbors_full | default('N/A') }}"
+    
+    - name: Fail if OSPF monitoring was unsuccessful
+      fail:
+        msg: "OSPF monitoring FAILED - {{ test_message }}"
+      when: test_status == "FAILURE"

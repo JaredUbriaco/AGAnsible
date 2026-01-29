@@ -199,7 +199,23 @@ install_package "git" "git (for version control)" "sudo apt-get install -y git" 
 echo ""
 
 echo ""
-echo "Step 5: Verifying installations..."
+echo "Step 5: Installing Ansible Collections..."
+if [ -f "requirements.yml" ]; then
+    echo "Installing collections from requirements.yml..."
+    if show_progress "Installing Ansible collections" "ansible-galaxy collection install -r requirements.yml" "/tmp/install_collections.log"; then
+        echo ""
+    else
+        echo -e "${YELLOW}⚠️  Some collections may have failed to install${NC}"
+        echo "You can install them manually later with: ansible-galaxy collection install -r requirements.yml"
+        echo ""
+    fi
+else
+    echo -e "${YELLOW}⚠️  requirements.yml not found. Skipping collection installation.${NC}"
+    echo ""
+fi
+
+echo ""
+echo "Step 6: Verifying installations..."
 echo ""
 
 # Verification function
@@ -249,6 +265,46 @@ if [ ${#FAILURES[@]} -gt 0 ]; then
     echo ""
 fi
 
+# Log installation results to actionlog
+ACTIONLOG_DIR="actionlog/scripts"
+mkdir -p "$ACTIONLOG_DIR"
+INSTALL_TIMESTAMP=$(date -Iseconds | tr ':' '-')
+
+log_installation_result() {
+    local status="$1"
+    local actionlog_file="$ACTIONLOG_DIR/install_${INSTALL_TIMESTAMP}.txt"
+    
+    cat > "$actionlog_file" << EOF
+============================================
+INSTALLATION EXECUTION LOG
+============================================
+Script: install.sh
+Timestamp: $(date -Iseconds)
+Status: $status
+Packages Installed: ${#SUCCESSES[@]}
+Packages Failed: ${#FAILURES[@]}
+
+Successfully Installed:
+$(for item in "${SUCCESSES[@]}"; do
+    IFS=':' read -r pkg desc <<< "$item"
+    echo "  ✅ $desc"
+done)
+
+Failed Installations:
+$(for item in "${FAILURES[@]}"; do
+    IFS=':' read -r pkg desc <<< "$item"
+    echo "  ❌ $desc"
+done)
+
+============================================
+VALIDATION:
+- Installation Execution: $(if [ "$status" = "SUCCESS" ]; then echo "PASS"; else echo "FAIL"; fi)
+- All Packages Installed: $(if [ ${#FAILURES[@]} -eq 0 ]; then echo "PASS"; else echo "FAIL"; fi)
+============================================
+EOF
+    echo "$actionlog_file"
+}
+
 echo "=========================================="
 if [ ${#FAILURES[@]} -eq 0 ]; then
     echo -e "${GREEN}✅ Installation Complete!${NC}"
@@ -264,6 +320,8 @@ if [ ${#FAILURES[@]} -eq 0 ]; then
     echo "  1. Verify installation: ./verify.sh"
     echo "  2. Run a test: ansible-playbook playbooks/base/ping_test.yml"
     echo "  3. Check README.md and WSL_SETUP.md for more information"
+    log_installation_result "SUCCESS" > /dev/null
+    echo "Actionlog: $(log_installation_result "SUCCESS")"
     exit 0
 else
     echo -e "${YELLOW}⚠️  Installation completed with ${#FAILURES[@]} failure(s)${NC}"
@@ -274,5 +332,7 @@ else
     echo "  3. Run with --skip-failed to continue despite errors"
     echo ""
     echo "To retry installation: $0"
+    log_installation_result "FAILURE" > /dev/null
+    echo "Actionlog: $(log_installation_result "FAILURE")"
     exit 1
 fi

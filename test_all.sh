@@ -33,6 +33,10 @@ TIMESTAMP=$(date -Iseconds | tr ':' '-')
 LOG_FILE="$LOG_DIR/test_suite_${TIMESTAMP}.log"
 SUMMARY_FILE="$LOG_DIR/test_suite_${TIMESTAMP}_summary.txt"
 
+# Also log to standardized actionlog format
+ACTIONLOG_DIR="actionlog/scripts"
+mkdir -p "$ACTIONLOG_DIR"
+
 # Function to parse errors and provide suggestions
 parse_error() {
     local log_file=$1
@@ -193,6 +197,42 @@ else
     echo "  No actionlog directory found"
 fi
 
+# Log test suite execution to actionlog
+log_test_suite_result() {
+    local status="$1"
+    local actionlog_file="$ACTIONLOG_DIR/test_suite_${TIMESTAMP}.txt"
+    
+    cat > "$actionlog_file" << EOF
+============================================
+TEST SUITE EXECUTION LOG
+============================================
+Script: test_all.sh
+Timestamp: $(date -Iseconds)
+Status: $status
+Tests Run: $TESTS_RUN
+Tests Passed: $((TESTS_RUN - FAILURES))
+Tests Failed: $FAILURES
+
+Test Results:
+$(for result in "${TEST_RESULTS[@]}"; do
+    IFS=':' read -r result_status result_name result_playbook <<< "$result"
+    echo "  - $result_name: $result_status"
+done)
+
+Log Files:
+  - Test suite log: $LOG_FILE
+  - Summary report: $SUMMARY_FILE
+  - Individual test logs: $LOG_DIR/
+
+============================================
+VALIDATION:
+- Test Suite Execution: $(if [ "$status" = "SUCCESS" ]; then echo "PASS"; else echo "FAIL"; fi)
+- All Tests Passed: $(if [ $FAILURES -eq 0 ]; then echo "PASS"; else echo "FAIL"; fi)
+============================================
+EOF
+    echo "$actionlog_file"
+}
+
 # Final status
 echo ""
 echo "=========================================="
@@ -201,6 +241,8 @@ if [ $FAILURES -eq 0 ]; then
     echo ""
     echo "Your AGAnsible suite is fully operational!"
     echo "Summary report: $SUMMARY_FILE"
+    log_test_suite_result "SUCCESS" > /dev/null
+    echo "Actionlog: $(log_test_suite_result "SUCCESS")"
     exit 0
 else
     echo -e "${YELLOW}⚠️  Some tests failed${NC}"
@@ -208,6 +250,8 @@ else
     echo "Check the output above for details"
     echo "Full logs available in: $LOG_DIR/"
     echo "Summary report: $SUMMARY_FILE"
+    log_test_suite_result "FAILURE" > /dev/null
+    echo "Actionlog: $(log_test_suite_result "FAILURE")"
     echo ""
     echo "To see detailed output, run: $0 --verbose"
     exit 1

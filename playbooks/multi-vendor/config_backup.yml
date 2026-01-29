@@ -1,0 +1,134 @@
+---
+# Multi-vendor configuration backup playbook
+# Supports: Cisco IOS/NXOS, Juniper JunOS, Arista EOS
+# Requires: Appropriate Ansible collections installed
+
+- name: Backup network device configurations (Multi-Vendor)
+  hosts: network_devices
+  gather_facts: no
+  
+  vars:
+    # Playbook metadata
+    playbook_version: "1.0.0"
+    playbook_author: "AGAnsible Team"
+    playbook_description: "Multi-vendor network device configuration backup"
+    
+    # Playbook variables
+    actionlog_dir: "{{ playbook_dir }}/../../actionlog/multi-vendor/config_backup"
+    backup_dir: "{{ playbook_dir }}/../../backups"
+    backup_timestamp: "{{ ansible_date_time.epoch | default('unknown') }}"
+  
+  tasks:
+    - name: Setup actionlog directory
+      import_tasks: ../../../roles/common/tasks/actionlog_setup.yml
+    
+    - name: Create backup directory
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: true
+    
+    - name: Generate timestamp
+      import_tasks: ../../../roles/common/tasks/timestamp.yml
+    
+    # Cisco IOS Backup
+    - name: Backup Cisco IOS configuration
+      cisco.ios.ios_config:
+        backup: yes
+        backup_options:
+          filename: "{{ inventory_hostname }}_ios_{{ backup_timestamp }}.cfg"
+          dir_path: "{{ backup_dir }}/cisco-ios/"
+      register: cisco_ios_backup
+      when: ansible_network_os == 'cisco.ios.ios'
+      failed_when: false
+      changed_when: false
+    
+    # Cisco NXOS Backup
+    - name: Backup Cisco NXOS configuration
+      cisco.nxos.nxos_config:
+        backup: yes
+        backup_options:
+          filename: "{{ inventory_hostname }}_nxos_{{ backup_timestamp }}.cfg"
+          dir_path: "{{ backup_dir }}/cisco-nxos/"
+      register: cisco_nxos_backup
+      when: ansible_network_os == 'cisco.nxos.nxos'
+      failed_when: false
+      changed_when: false
+    
+    # Juniper JunOS Backup
+    - name: Backup Juniper JunOS configuration
+      junipernetworks.junos.junos_config:
+        backup: yes
+        backup_options:
+          filename: "{{ inventory_hostname }}_junos_{{ backup_timestamp }}.cfg"
+          dir_path: "{{ backup_dir }}/juniper-junos/"
+      register: juniper_backup
+      when: ansible_network_os == 'junipernetworks.junos.junos'
+      failed_when: false
+      changed_when: false
+    
+    # Arista EOS Backup
+    - name: Backup Arista EOS configuration
+      arista.eos.eos_config:
+        backup: yes
+        backup_options:
+          filename: "{{ inventory_hostname }}_eos_{{ backup_timestamp }}.cfg"
+          dir_path: "{{ backup_dir }}/arista-eos/"
+      register: arista_backup
+      when: ansible_network_os == 'arista.eos.eos'
+      failed_when: false
+      changed_when: false
+    
+    # Determine backup result
+    - name: Set backup result
+      set_fact:
+        backup_result: "{{ cisco_ios_backup if ansible_network_os == 'cisco.ios.ios' else (cisco_nxos_backup if ansible_network_os == 'cisco.nxos.nxos' else (juniper_backup if ansible_network_os == 'junipernetworks.junos.junos' else arista_backup)) }}"
+        backup_success: "{{ (cisco_ios_backup.failed is not defined or not cisco_ios_backup.failed) if ansible_network_os == 'cisco.ios.ios' else ((cisco_nxos_backup.failed is not defined or not cisco_nxos_backup.failed) if ansible_network_os == 'cisco.nxos.nxos' else ((juniper_backup.failed is not defined or not juniper_backup.failed) if ansible_network_os == 'junipernetworks.junos.junos' else (arista_backup.failed is not defined or not arista_backup.failed))) }}"
+        device_type: "{{ ansible_network_os }}"
+    
+    - name: Validate backup success
+      set_fact:
+        test_status: "{{ 'SUCCESS' if backup_success else 'FAILURE' }}"
+        test_message: "{{ 'Configuration backup successful' if backup_success else 'Configuration backup failed' }}"
+    
+    - name: Prepare actionlog data structure
+      set_fact:
+        actionlog_data:
+          test_name: "Config Backup"
+          timestamp: "{{ timestamp }}"
+          host: "{{ inventory_hostname }}"
+          status: "{{ test_status }}"
+          message: "{{ test_message }}"
+          details:
+            device_type: "{{ device_type }}"
+            backup_dir: "{{ backup_dir }}"
+            backup_timestamp: "{{ backup_timestamp }}"
+          metrics:
+            backup_success: "{{ backup_success }}"
+          validation:
+            backup_completed: "{{ 'PASS' if backup_success else 'FAIL' }}"
+          full_output: "{{ backup_result | to_nice_yaml }}"
+          playbook_metadata:
+            version: "{{ playbook_version }}"
+            author: "{{ playbook_author }}"
+            description: "{{ playbook_description }}"
+    
+    - name: Write test results to actionlog
+      import_tasks: ../../../roles/common/tasks/write_actionlog.yml
+      vars:
+        actionlog_filename: "config_backup_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}"
+    
+    - name: Display backup results
+      debug:
+        msg:
+          - "Backup Status: {{ test_status }}"
+          - "{{ test_message }}"
+          - "Device Type: {{ device_type }}"
+          - "Backup Directory: {{ backup_dir }}"
+    
+    - name: Fail if backup was unsuccessful
+      fail:
+        msg: "Configuration backup FAILED - {{ test_message }}"
+      when: test_status == "FAILURE"

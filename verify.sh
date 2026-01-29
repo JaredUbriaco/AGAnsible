@@ -3,6 +3,11 @@
 
 set -e
 
+# Actionlog directory
+ACTIONLOG_DIR="actionlog/scripts"
+mkdir -p "$ACTIONLOG_DIR"
+TIMESTAMP=$(date -Iseconds | tr ':' '-')
+
 echo "=========================================="
 echo "Ansible Deployment Verification"
 echo "=========================================="
@@ -113,6 +118,38 @@ else
     FAILURES=$((FAILURES + 1))
 fi
 
+# Log verification results to actionlog
+log_verification_result() {
+    local status="$1"
+    local actionlog_file="$ACTIONLOG_DIR/verify_${TIMESTAMP}.txt"
+    
+    cat > "$actionlog_file" << EOF
+============================================
+VERIFICATION EXECUTION LOG
+============================================
+Script: verify.sh
+Timestamp: $(date -Iseconds)
+Status: $status
+Failures Found: $FAILURES
+
+Checks Performed:
+- Ansible installation
+- Python installation
+- DNS utilities
+- Playbook structure
+- Configuration files
+- Actionlog directories
+- Documentation
+
+============================================
+VALIDATION:
+- Verification Execution: $(if [ "$status" = "SUCCESS" ]; then echo "PASS"; else echo "FAIL"; fi)
+- All Checks Passed: $(if [ $FAILURES -eq 0 ]; then echo "PASS"; else echo "FAIL"; fi)
+============================================
+EOF
+    echo "$actionlog_file"
+}
+
 # Summary
 echo ""
 echo "=========================================="
@@ -122,6 +159,8 @@ if [ $FAILURES -eq 0 ]; then
     echo "Next steps:"
     echo "  1. Run a test: ansible-playbook playbooks/base/ping_test.yml"
     echo "  2. Check results: ls -la actionlog/base/ping_test/"
+    log_verification_result "SUCCESS" > /dev/null
+    echo "Actionlog: $(log_verification_result "SUCCESS")"
     exit 0
 else
     echo -e "${RED}❌ Verification Failed - $FAILURES issue(s) found${NC}"
@@ -130,5 +169,7 @@ else
     echo "  1. Run install.sh if Ansible is not installed"
     echo "  2. Check file paths if files are missing"
     echo "  3. Review README.md for setup instructions"
+    log_verification_result "FAILURE" > /dev/null
+    echo "Actionlog: $(log_verification_result "FAILURE")"
     exit 1
 fi

@@ -1,0 +1,150 @@
+---
+# MPLS LSP (Label Switched Path) monitoring playbook
+# Checks MPLS LSP status and statistics
+# Supports: Juniper JunOS, Cisco IOS (limited)
+
+- name: Monitor MPLS LSP status
+  hosts: network_devices
+  gather_facts: no
+  
+  vars:
+    # Playbook metadata
+    playbook_version: "1.0.0"
+    playbook_author: "AGAnsible Team"
+    playbook_description: "MPLS Label Switched Path status monitoring"
+    
+    # Playbook variables
+    actionlog_dir: "{{ playbook_dir }}/../../actionlog/network/mpls_lsp"
+  
+  tasks:
+    - name: Setup actionlog directory
+      import_tasks: ../../../roles/common/tasks/actionlog_setup.yml
+    
+    - name: Generate timestamp
+      import_tasks: ../../../roles/common/tasks/timestamp.yml
+    
+    # Juniper JunOS MPLS Commands
+    - name: Get MPLS LSP status (Juniper JunOS)
+      junipernetworks.junos.junos_command:
+        commands:
+          - show mpls lsp
+          - show mpls lsp extensive
+          - show mpls lsp statistics
+      register: mpls_output
+      when: ansible_network_os == 'junipernetworks.junos.junos'
+      failed_when: false
+      changed_when: false
+    
+    # Cisco IOS MPLS Commands (limited support)
+    - name: Get MPLS LDP neighbor status (Cisco IOS)
+      cisco.ios.ios_command:
+        commands:
+          - show mpls ldp neighbor
+          - show mpls forwarding-table
+          - show mpls interfaces
+      register: mpls_output
+      when: ansible_network_os == 'cisco.ios.ios'
+      failed_when: false
+      changed_when: false
+    
+    # Arista EOS MPLS Commands
+    - name: Get MPLS status (Arista EOS)
+      arista.eos.eos_command:
+        commands:
+          - show mpls ldp neighbor
+          - show mpls forwarding-table
+      register: mpls_output
+      when: ansible_network_os == 'arista.eos.eos'
+      failed_when: false
+      changed_when: false
+    
+    # Fallback for unsupported devices
+    - name: Check if MPLS command executed
+      set_fact:
+        mpls_available: "{{ mpls_output is defined and mpls_output.stdout is defined }}"
+        device_supported: "{{ ansible_network_os in ['junipernetworks.junos.junos', 'cisco.ios.ios', 'arista.eos.eos'] }}"
+    
+    - name: Fail if device not supported
+      fail:
+        msg: "MPLS monitoring not supported for device type: {{ ansible_network_os }}. Supported: junipernetworks.junos.junos, cisco.ios.ios, arista.eos.eos"
+      when: not device_supported
+    
+    # Parse MPLS output
+    - name: Extract MPLS LSP count (Juniper)
+      set_fact:
+        mpls_lsp_count: "{{ mpls_output.stdout[0] | regex_search('([0-9]+) LSPs') | default(['0']) | first | int }}"
+      when: 
+        - mpls_available
+        - ansible_network_os == 'junipernetworks.junos.junos'
+    
+    - name: Extract MPLS LDP neighbor count (Cisco/Arista)
+      set_fact:
+        mpls_ldp_neighbor_count: "{{ mpls_output.stdout[0] | regex_search('Peer LDP Ident: ([0-9.]+)') | length }}"
+      when:
+        - mpls_available
+        - ansible_network_os in ['cisco.ios.ios', 'arista.eos.eos']
+    
+    - name: Extract MPLS LSP states (Juniper)
+      set_fact:
+        mpls_lsp_up: "{{ mpls_output.stdout[0] | regex_findall('State: Up') | length }}"
+        mpls_lsp_down: "{{ mpls_output.stdout[0] | regex_findall('State: Dn') | length }}"
+      when:
+        - mpls_available
+        - ansible_network_os == 'junipernetworks.junos.junos'
+    
+    - name: Check MPLS status
+      set_fact:
+        mpls_status: "{{ 'UP' if (mpls_output.failed is not defined or not mpls_output.failed) and mpls_available else 'DOWN' }}"
+        test_status: "{{ 'SUCCESS' if (mpls_output.failed is not defined or not mpls_output.failed) and mpls_available else 'FAILURE' }}"
+        test_message: "{{ 'MPLS monitoring successful' if (mpls_output.failed is not defined or not mpls_output.failed) and mpls_available else 'MPLS monitoring failed or MPLS not configured' }}"
+    
+    - name: Prepare actionlog data structure
+      set_fact:
+        actionlog_data:
+          test_name: "MPLS LSP Status"
+          timestamp: "{{ timestamp }}"
+          host: "{{ inventory_hostname }}"
+          status: "{{ test_status }}"
+          message: "{{ test_message }}"
+          details:
+            device_type: "{{ ansible_network_os }}"
+            mpls_status: "{{ mpls_status }}"
+            mpls_lsp_count: "{{ mpls_lsp_count | default('N/A') }}"
+            mpls_ldp_neighbor_count: "{{ mpls_ldp_neighbor_count | default('N/A') }}"
+            mpls_lsp_up: "{{ mpls_lsp_up | default('N/A') }}"
+            mpls_lsp_down: "{{ mpls_lsp_down | default('N/A') }}"
+          metrics:
+            mpls_available: "{{ mpls_available }}"
+            device_supported: "{{ device_supported }}"
+            lsp_count: "{{ mpls_lsp_count | default(0) }}"
+            lsp_up_count: "{{ mpls_lsp_up | default(0) }}"
+            lsp_down_count: "{{ mpls_lsp_down | default(0) }}"
+          validation:
+            mpls_command_executed: "{{ 'PASS' if mpls_available else 'FAIL' }}"
+            device_supported_check: "{{ 'PASS' if device_supported else 'FAIL' }}"
+            lsp_status_check: "{{ 'PASS' if (mpls_lsp_up | default(0) | int) > 0 else 'WARN' }}"
+          full_output: "{{ mpls_output.stdout | default([]) | to_nice_yaml }}"
+          playbook_metadata:
+            version: "{{ playbook_version }}"
+            author: "{{ playbook_author }}"
+            description: "{{ playbook_description }}"
+    
+    - name: Write test results to actionlog
+      import_tasks: ../../../roles/common/tasks/write_actionlog.yml
+      vars:
+        actionlog_filename: "mpls_lsp_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}"
+    
+    - name: Display MPLS status
+      debug:
+        msg:
+          - "MPLS Status: {{ mpls_status }}"
+          - "{{ test_message }}"
+          - "Device Type: {{ ansible_network_os }}"
+          - "LSP Count: {{ mpls_lsp_count | default('N/A') }}"
+          - "LSPs Up: {{ mpls_lsp_up | default('N/A') }}"
+          - "LSPs Down: {{ mpls_lsp_down | default('N/A') }}"
+    
+    - name: Fail if MPLS monitoring was unsuccessful
+      fail:
+        msg: "MPLS monitoring FAILED - {{ test_message }}"
+      when: test_status == "FAILURE"

@@ -20,13 +20,8 @@
     test_timeout: 10
   
   tasks:
-    - name: Create actionlog directory if it doesn't exist
-      file:
-        path: "{{ actionlog_dir }}"
-        state: directory
-        mode: '0755'
-      delegate_to: localhost
-      run_once: true
+    - name: Setup actionlog directory
+      import_tasks: ../../../roles/common/tasks/actionlog_setup.yml
       
     - name: Check if dig is installed
       command: which dig
@@ -89,55 +84,40 @@
         ip_count: "{{ resolved_ips | length }}"
         
     - name: Generate timestamp
-      command: date -Iseconds
-      register: timestamp_result
-      delegate_to: localhost
-      run_once: true
-      changed_when: false
-      
-    - name: Set timestamp fact
+      import_tasks: ../../../roles/common/tasks/timestamp.yml
+    
+    - name: Prepare actionlog data structure
       set_fact:
-        timestamp: "{{ timestamp_result.stdout }}"
-      delegate_to: localhost
-      run_once: true
-      
+        actionlog_data:
+          test_name: "DNS Test"
+          timestamp: "{{ timestamp }}"
+          host: "{{ inventory_hostname }}"
+          status: "{{ test_status }}"
+          message: "{{ test_message }}"
+          details:
+            target_domain: "{{ target_domain }}"
+            dns_server: "{{ dns_server }}"
+            dns_tool: "{{ dns_tool }}"
+            dns_tool_available: "{{ dns_tool_available }}"
+          metrics:
+            ip_count: "{{ ip_count }}"
+            resolved_ips: "{{ resolved_ips }}"
+          validation:
+            dns_tool_installed: "{{ 'PASS' if dns_tool_available else 'FAIL' }}"
+            dns_resolution: "{{ 'PASS' if test_status == 'SUCCESS' else 'FAIL' }}"
+            ip_addresses_found: "{{ 'PASS' if ip_count > 0 else 'FAIL' }}"
+            dns_server_response: "{{ 'PASS' if dns_rc == 0 else 'FAIL' }}"
+          full_output: "{{ dns_output }}"
+          playbook_metadata:
+            version: "{{ playbook_version }}"
+            author: "{{ playbook_author }}"
+            description: "{{ playbook_description }}"
+    
     - name: Write test results to actionlog
-      copy:
-        content: |
-          ============================================
-          DNS TEST RESULTS
-          ============================================
-          Test Date: {{ timestamp }}
-          Host: {{ inventory_hostname }}
-          DNS Tool: {{ dns_tool }}
-          DNS Server: {{ dns_server }} (Cloudflare)
-          Target Domain: {{ target_domain }}
-          
-          STATUS: {{ test_status }}
-          MESSAGE: {{ test_message }}
-          
-          Resolved IP Addresses ({{ ip_count }}):
-          {% for ip in resolved_ips %}
-          - {{ ip }}
-          {% endfor %}
-          
-          DNS Tool Available: {{ dns_tool_available }}
-          Tool Used: {{ dns_tool }}
-          
-          FULL OUTPUT:
-          {{ dns_output }}
-          
-          ============================================
-          VALIDATION:
-          - DNS Tool Installed: {{ 'PASS' if dns_tool_available else 'FAIL' }}
-          - DNS Resolution: {{ 'PASS' if test_status == 'SUCCESS' else 'FAIL' }}
-          - IP Addresses Found: {{ 'PASS' if ip_count > 0 else 'FAIL' }}
-          - DNS Server Response: {{ 'PASS' if dns_rc == 0 else 'FAIL' }}
-          ============================================
-        dest: "{{ actionlog_dir }}/dns_test_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.txt"
-        mode: '0644'
-      delegate_to: localhost
-      
+      import_tasks: ../../../roles/common/tasks/write_actionlog.yml
+      vars:
+        actionlog_filename: "dns_test_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}"
+    
     - name: Display test results
       debug:
         msg:
@@ -145,7 +125,8 @@
           - "{{ test_message }}"
           - "DNS Server: {{ dns_server }}"
           - "Resolved IPs: {{ resolved_ips | join(', ') }}"
-          - "Results saved to: {{ actionlog_dir }}/dns_test_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.txt"
+          - "Output Format: {{ output_format | default('text') }}"
+          - "Results saved to: {{ actionlog_dir }}/dns_test_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.{{ 'json' if (output_format | default('text')) == 'json' else 'txt' }}"
           
     - name: Fail if DNS test was unsuccessful
       fail:

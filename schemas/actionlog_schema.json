@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/JaredUbriaco/AGAnsible/schemas/actionlog_schema.json",
+  "title": "AGAnsible Actionlog Schema",
+  "description": "Schema for validating AGAnsible actionlog JSON files",
+  "type": "object",
+  "required": ["test_name", "timestamp", "status"],
+  "properties": {
+    "test_name": {
+      "type": "string",
+      "description": "Name of the test that was executed"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO8601 timestamp when the test was executed"
+    },
+    "host": {
+      "type": "string",
+      "description": "Hostname or IP address where the test was executed"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["SUCCESS", "FAILURE"],
+      "description": "Overall test status"
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable message describing the test result"
+    },
+    "details": {
+      "type": "object",
+      "description": "Additional test-specific details",
+      "additionalProperties": true
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Test metrics and measurements",
+      "additionalProperties": {
+        "oneOf": [
+          {"type": "string"},
+          {"type": "number"},
+          {"type": "boolean"},
+          {"type": "array"},
+          {"type": "object"}
+        ]
+      }
+    },
+    "validation": {
+      "type": "object",
+      "description": "Validation check results",
+      "additionalProperties": {
+        "type": "string",
+        "enum": ["PASS", "FAIL"]
+      }
+    },
+    "full_output": {
+      "type": "string",
+      "description": "Full output from the test command"
+    },
+    "playbook_metadata": {
+      "type": "object",
+      "description": "Metadata about the playbook that executed the test",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
