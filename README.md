@@ -191,6 +191,7 @@ AGAnsible/
 ├── install.sh                   # Complete installation script
 ├── verify.sh                    # Verification script
 ├── test_all.sh                  # Test all playbooks
+├── test_localhost.sh            # Test localhost-capable playbooks only
 ├── ansible.cfg                  # Ansible configuration
 │
 ├── inventories/                 # The Trinity #1: WHERE (target hosts)
@@ -373,27 +374,54 @@ Each file contains:
 
 ### Quick Test Suite
 
-Run all playbooks at once:
+#### Run All Tests (Including Network Device Tests)
 ```bash
 ./test_all.sh
 ```
 
 This will:
-- Run all available playbooks
+- Run all available playbooks (including those requiring network devices)
 - Show pass/fail status for each
 - Display summary of results
 - List created actionlog files
+
+#### Run Localhost Tests Only (Recommended for Quick Validation)
+```bash
+./test_localhost.sh
+```
+
+This will:
+- Run only localhost-capable tests (no network devices required)
+- Test 9 fully implemented localhost playbooks
+- Show pass/fail status for each
+- Display summary of results
+- List created actionlog files
+
+**Options:**
+```bash
+./test_localhost.sh --verbose    # Show detailed output
+./test_localhost.sh --json      # Generate JSON actionlog files
+./test_localhost.sh --both      # Generate both text and JSON files
+```
 
 **Expected output:**
 ```
 ✅ PASS - Ping Test
 ✅ PASS - Curl Test
 ✅ PASS - DNS Test
+✅ PASS - Port Scan
+✅ PASS - Network Interfaces
+✅ PASS - SSL Certificate Check
+✅ PASS - Firewall Rules Check
+✅ PASS - Network Statistics
+✅ PASS - Traceroute Test
 
-Tests Run: 3
-Passed: 3
+Tests Run: 9
+Passed: 9
 Failed: 0
 ```
+
+**Note**: `test_localhost.sh` is recommended for quick validation as it only tests playbooks that can run on localhost without requiring network devices or remote infrastructure.
 
 ### Individual Playbook Tests
 
@@ -468,7 +496,7 @@ sudo pip3 install --break-system-packages ansible
 sudo -v
 
 # Check file permissions
-chmod +x install.sh verify.sh test_all.sh
+chmod +x install.sh verify.sh test_all.sh test_localhost.sh
 
 # Fix actionlog permissions if needed
 sudo chown -R $USER:$USER actionlog/
@@ -579,7 +607,7 @@ After installation, verify:
 - [ ] `ansible-playbook playbooks/base/ping_test.yml` succeeds
 - [ ] Actionlog files are created in `actionlog/` directories
 - [ ] All validations show PASS in actionlog files
-- [ ] `./test_all.sh` runs successfully
+- [ ] `./test_all.sh` runs successfully (or `./test_localhost.sh` for localhost-only tests)
 
 ---
 
