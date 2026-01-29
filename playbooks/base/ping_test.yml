@@ -18,7 +18,7 @@
   
   tasks:
     - name: Setup actionlog directory
-      import_tasks: ../../../roles/common/tasks/actionlog_setup.yml
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/actionlog_setup.yml"
       
     - name: Ping {{ target_host }} using command module
       command: ping -c {{ ping_count }} {{ target_host }}
@@ -47,7 +47,7 @@
         test_message: "{{ 'All packets received' if packet_loss == 0 else 'Packet loss detected: ' + (packet_loss | string) + '%' }}"
         
     - name: Generate timestamp
-      import_tasks: ../../../roles/common/tasks/timestamp.yml
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/timestamp.yml"
     
     - name: Prepare actionlog data structure
       set_fact:
@@ -74,7 +74,7 @@
             description: "{{ playbook_description }}"
     
     - name: Format as API response (if api_response_format is enabled)
-      import_tasks: ../../../roles/common/tasks/api_response_format.yml
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/api_response_format.yml"
       vars:
         api_data:
           playbook: "ping_test.yml"
@@ -85,7 +85,7 @@
       when: api_response_format | default(false)
     
     - name: Write test results to actionlog
-      import_tasks: ../../../roles/common/tasks/write_actionlog.yml
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/write_actionlog.yml"
       vars:
         actionlog_filename: "ping_test_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}"
     

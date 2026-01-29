@@ -18,10 +18,10 @@
   
   tasks:
     - name: Setup actionlog directory
-      import_tasks: ../../../roles/common/tasks/actionlog_setup.yml
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/actionlog_setup.yml"
     
     - name: Generate timestamp
-      import_tasks: ../../../roles/common/tasks/timestamp.yml
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/timestamp.yml"
     
     # Juniper JunOS MPLS Commands
     - name: Get MPLS LSP status (Juniper JunOS)
@@ -130,7 +130,7 @@
             description: "{{ playbook_description }}"
     
     - name: Write test results to actionlog
-      import_tasks: ../../../roles/common/tasks/write_actionlog.yml
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/write_actionlog.yml"
       vars:
         actionlog_filename: "mpls_lsp_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}"
     

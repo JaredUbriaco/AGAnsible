@@ -23,10 +23,10 @@
   
   tasks:
     - name: Setup actionlog directory
-      import_tasks: ../../../roles/common/tasks/actionlog_setup.yml
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/actionlog_setup.yml"
     
     - name: Generate timestamp
-      import_tasks: ../../../roles/common/tasks/timestamp.yml
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/timestamp.yml"
     
     # Check for required tools
     - name: Check if ping is available
@@ -193,7 +193,7 @@
             description: "{{ playbook_description }}"
     
     - name: Write test results to actionlog
-      import_tasks: ../../../roles/common/tasks/write_actionlog.yml
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/write_actionlog.yml"
       vars:
         actionlog_filename: "performance_test_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}"
     

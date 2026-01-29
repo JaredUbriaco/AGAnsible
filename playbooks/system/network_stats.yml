@@ -1,0 +1,106 @@
+---
+# Network statistics - works on localhost
+- name: Network statistics collection
+  hosts: all
+  gather_facts: no
+  connection: local
+  
+  vars:
+    # Playbook metadata
+    playbook_version: "1.0.0"
+    playbook_author: "AGAnsible Team"
+    playbook_description: "Collect network interface statistics and performance metrics"
+    
+    # Playbook variables
+    actionlog_dir: "{{ playbook_dir }}/../../actionlog/system/network_stats"
+  
+  tasks:
+    - name: Setup actionlog directory
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/actionlog_setup.yml"
+    
+    - name: Get network statistics using ss command
+      command: ss -s
+      register: ss_stats
+      failed_when: false
+      changed_when: false
+    
+    - name: Get interface statistics from /proc/net/dev
+      slurp:
+        src: /proc/net/dev
+      register: proc_net_dev
+      failed_when: false
+      changed_when: false
+    
+    - name: Parse /proc/net/dev
+      set_fact:
+        interface_stats: "{{ proc_net_dev.content | b64decode | split('\n') | select('match', '^\\s*[a-z]') | list }}"
+      when: proc_net_dev.content is defined
+    
+    - name: Get connection statistics using ss
+      command: ss -tan | head -20
+      register: ss_connections
+      failed_when: false
+      changed_when: false
+    
+    - name: Get network errors from /proc/net/snmp
+      slurp:
+        src: /proc/net/snmp
+      register: proc_net_snmp
+      failed_when: false
+      changed_when: false
+    
+    - name: Calculate statistics summary
+      set_fact:
+        stats_summary:
+          ss_output: "{{ ss_stats.stdout | default('No statistics available') }}"
+          interface_count: "{{ (interface_stats | default([]) | length) }}"
+          active_connections: "{{ (ss_connections.stdout | default('') | regex_findall('ESTAB')) | length }}"
+          snmp_data: "{{ proc_net_snmp.content | b64decode | default('No SNMP data available') if proc_net_snmp.content is defined else 'No SNMP data available' }}"
+    
+    - name: Determine test status
+      set_fact:
+        test_status: "{{ 'SUCCESS' if stats_summary.interface_count | int > 0 else 'FAILURE' }}"
+        test_message: "{{ 'Network statistics collected: ' + (stats_summary.interface_count | string) + ' interfaces, ' + (stats_summary.active_connections | string) + ' active connections' }}"
+    
+    - name: Generate timestamp
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/timestamp.yml"
+    
+    - name: Prepare actionlog data structure
+      set_fact:
+        actionlog_data:
+          test_name: "Network Statistics"
+          timestamp: "{{ timestamp }}"
+          host: "{{ inventory_hostname }}"
+          status: "{{ test_status }}"
+          message: "{{ test_message }}"
+          details:
+            interface_count: "{{ stats_summary.interface_count }}"
+            active_connections: "{{ stats_summary.active_connections }}"
+            ss_statistics: "{{ stats_summary.ss_output }}"
+            interface_details: "{{ interface_stats | default([]) }}"
+            snmp_data: "{{ stats_summary.snmp_data }}"
+          metrics:
+            interfaces_found: "{{ stats_summary.interface_count }}"
+            connections_active: "{{ stats_summary.active_connections }}"
+          validation:
+            statistics_collected: "{{ 'PASS' if stats_summary.interface_count | int > 0 else 'FAIL' }}"
+          full_output: "{{ stats_summary | to_nice_yaml }}"
+          playbook_metadata:
+            version: "{{ playbook_version }}"
+            author: "{{ playbook_author }}"
+            description: "{{ playbook_description }}"
+    
+    - name: Write test results to actionlog
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/write_actionlog.yml"
+      vars:
+        actionlog_filename: "network_stats_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}"
+    
+    - name: Display test results
+      debug:
+        msg:
+          - "Test Status: {{ test_status }}"
+          - "{{ test_message }}"
+          - "Interfaces Found: {{ stats_summary.interface_count }}"
+          - "Active Connections: {{ stats_summary.active_connections }}"
+          - "Output Format: {{ output_format | default('text') }}"
+          - "Results saved to: {{ actionlog_dir }}/network_stats_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.{{ 'json' if (output_format | default('text')) == 'json' else 'txt' }}"

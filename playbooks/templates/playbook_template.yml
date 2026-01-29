@@ -25,11 +25,11 @@
   tasks:
     # Setup actionlog directory
     - name: Setup actionlog directory
-      import_tasks: ../../../roles/common/tasks/actionlog_setup.yml
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/actionlog_setup.yml
     
     # Generate timestamp
     - name: Generate timestamp
-      import_tasks: ../../../roles/common/tasks/timestamp.yml
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/timestamp.yml
     
     # Add your test tasks here
     # Example:

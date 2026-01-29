@@ -1,0 +1,148 @@
+---
+# Port connectivity test - works on localhost
+- name: Port connectivity test
+  hosts: all
+  gather_facts: no
+  connection: local
+  
+  vars:
+    # Playbook metadata
+    playbook_version: "1.0.0"
+    playbook_author: "AGAnsible Team"
+    playbook_description: "Test TCP/UDP port connectivity to target hosts"
+    
+    # Playbook variables
+    actionlog_dir: "{{ playbook_dir }}/../../actionlog/system/port_scan"
+    target_hosts: ["localhost", "127.0.0.1"]
+    target_ports: [22, 80, 443, 8080]
+    port_timeout: 5
+  
+  tasks:
+    - name: Setup actionlog directory
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/actionlog_setup.yml"
+    
+    - name: Check if nc (netcat) is available
+      command: which nc || which netcat
+      register: nc_check
+      failed_when: false
+      changed_when: false
+    
+    - name: Check if timeout command is available
+      command: which timeout
+      register: timeout_check
+      failed_when: false
+      changed_when: false
+    
+    - name: Test port connectivity using nc
+      when: nc_check.rc == 0
+      block:
+        - name: Test TCP port {{ item.1 }} on {{ item.0 }}
+          command: >
+            {{ 'timeout ' + (port_timeout | string) + ' ' if timeout_check.rc == 0 else '' }}
+            nc -zv -w {{ port_timeout }} {{ item.0 }} {{ item.1 }}
+          register: port_result
+          failed_when: false
+          changed_when: false
+          loop: "{{ target_hosts | product(target_ports) | list }}"
+          loop_control:
+            label: "{{ item.0 }}:{{ item.1 }}"
+        
+        - name: Extract port test results
+          set_fact:
+            port_results: "{{ port_results | default([]) + [{'host': item.item[0], 'port': item.item[1], 'status': 'OPEN' if item.rc == 0 else 'CLOSED', 'output': item.stdout + item.stderr}] }}"
+          loop: "{{ port_result.results | default([]) }}"
+          when: port_result.results is defined
+    
+    - name: Test port connectivity using Python socket (fallback)
+      when: nc_check.rc != 0
+      block:
+        - name: Test TCP port connectivity
+          shell: >
+            python3 << 'PYEOF'
+            import socket
+            import sys
+            host = '{{ item[0] }}'
+            port = {{ item[1] }}
+            timeout = {{ port_timeout }}
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(timeout)
+                result = sock.connect_ex((host, port))
+                sock.close()
+                if result == 0:
+                    print(f'{host}:{port} - OPEN')
+                    sys.exit(0)
+                else:
+                    print(f'{host}:{port} - CLOSED')
+                    sys.exit(1)
+            except Exception as e:
+                print(f'{host}:{port} - ERROR: {e}')
+                sys.exit(1)
+            PYEOF
+          register: port_result_python
+          failed_when: false
+          changed_when: false
+          loop: "{{ target_hosts | product(target_ports) | list }}"
+          loop_control:
+            label: "{{ item[0] }}:{{ item[1] }}"
+        
+        - name: Extract Python port test results
+          set_fact:
+            port_results: "{{ port_results | default([]) + [{'host': item.item[0], 'port': item.item[1], 'status': 'OPEN' if item.rc == 0 else 'CLOSED', 'output': item.stdout | default('')}] }}"
+          loop: "{{ port_result_python.results | default([]) }}"
+          when: port_result_python.results is defined
+    
+    - name: Calculate test statistics
+      set_fact:
+        total_ports_tested: "{{ port_results | length | default(0) }}"
+        open_ports: "{{ port_results | selectattr('status', 'equalto', 'OPEN') | list | length }}"
+        closed_ports: "{{ port_results | selectattr('status', 'equalto', 'CLOSED') | list | length }}"
+    
+    - name: Determine overall test status
+      set_fact:
+        test_status: "{{ 'SUCCESS' if total_ports_tested > 0 else 'FAILURE' }}"
+        test_message: "{{ 'Port scan completed: ' + (open_ports | string) + ' open, ' + (closed_ports | string) + ' closed' }}"
+    
+    - name: Generate timestamp
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/timestamp.yml"
+    
+    - name: Prepare actionlog data structure
+      set_fact:
+        actionlog_data:
+          test_name: "Port Scan Test"
+          timestamp: "{{ timestamp }}"
+          host: "{{ inventory_hostname }}"
+          status: "{{ test_status }}"
+          message: "{{ test_message }}"
+          details:
+            target_hosts: "{{ target_hosts }}"
+            target_ports: "{{ target_ports }}"
+            port_timeout: "{{ port_timeout }}"
+            tool_used: "{{ 'nc' if nc_check.rc == 0 else 'python3' }}"
+          metrics:
+            total_ports_tested: "{{ total_ports_tested }}"
+            open_ports: "{{ open_ports }}"
+            closed_ports: "{{ closed_ports }}"
+          validation:
+            ports_tested: "{{ 'PASS' if total_ports_tested > 0 else 'FAIL' }}"
+          full_output: "{{ port_results | default([]) | to_nice_yaml }}"
+          playbook_metadata:
+            version: "{{ playbook_version }}"
+            author: "{{ playbook_author }}"
+            description: "{{ playbook_description }}"
+    
+    - name: Write test results to actionlog
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/write_actionlog.yml"
+      vars:
+        actionlog_filename: "port_scan_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}"
+    
+    - name: Display test results
+      debug:
+        msg:
+          - "Test Status: {{ test_status }}"
+          - "{{ test_message }}"
+          - "Total Ports Tested: {{ total_ports_tested }}"
+          - "Open Ports: {{ open_ports }}"
+          - "Closed Ports: {{ closed_ports }}"
+          - "Output Format: {{ output_format | default('text') }}"
+          - "Results saved to: {{ actionlog_dir }}/port_scan_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.{{ 'json' if (output_format | default('text')) == 'json' else 'txt' }}"

@@ -24,7 +24,7 @@
   
   tasks:
     - name: Setup actionlog directory
-      import_tasks: ../../../roles/common/tasks/actionlog_setup.yml
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/actionlog_setup.yml"
       
     - name: Check if curl is installed
       command: which curl
@@ -74,7 +74,7 @@
         total_count: "{{ test_results | length }}"
         
     - name: Generate timestamp
-      import_tasks: ../../../roles/common/tasks/timestamp.yml
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/timestamp.yml"
     
     - name: Prepare actionlog data structure
       set_fact:
@@ -103,7 +103,7 @@
             description: "{{ playbook_description }}"
     
     - name: Write test results to actionlog
-      import_tasks: ../../../roles/common/tasks/write_actionlog.yml
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/write_actionlog.yml"
       vars:
         actionlog_filename: "curl_test_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}"
     

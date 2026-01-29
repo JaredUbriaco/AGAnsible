@@ -138,6 +138,24 @@ run_test "Curl Test" "playbooks/system/curl_test.yml"
 # Test 3: DNS Test (System)
 run_test "DNS Test" "playbooks/system/dns_test.yml"
 
+# Test 4: Port Scan (System)
+run_test "Port Scan" "playbooks/system/port_scan.yml"
+
+# Test 5: Network Interfaces (System)
+run_test "Network Interfaces" "playbooks/system/network_interfaces.yml"
+
+# Test 6: SSL Certificate Check (System)
+run_test "SSL Certificate Check" "playbooks/system/ssl_cert_check.yml"
+
+# Test 7: Traceroute Test (System)
+run_test "Traceroute Test" "playbooks/system/traceroute_test.yml"
+
+# Test 8: Network Statistics (System)
+run_test "Network Statistics" "playbooks/system/network_stats.yml"
+
+# Test 9: Firewall Check (System)
+run_test "Firewall Check" "playbooks/system/firewall_check.yml"
+
 # Summary
 echo ""
 echo "=========================================="

@@ -1,0 +1,174 @@
+---
+# Traceroute test - works on localhost
+- name: Traceroute test
+  hosts: all
+  gather_facts: no
+  connection: local
+  
+  vars:
+    # Playbook metadata
+    playbook_version: "1.0.0"
+    playbook_author: "AGAnsible Team"
+    playbook_description: "Network path discovery using traceroute"
+    
+    # Playbook variables
+    actionlog_dir: "{{ playbook_dir }}/../../actionlog/system/traceroute_test"
+    target_hosts: ["8.8.8.8", "1.1.1.1"]
+    max_hops: 30
+    trace_timeout: 5
+  
+  tasks:
+    - name: Setup actionlog directory
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/actionlog_setup.yml"
+    
+    - name: Check if traceroute is available
+      command: which traceroute
+      register: traceroute_check
+      failed_when: false
+      changed_when: false
+    
+    - name: Check if mtr is available
+      command: which mtr
+      register: mtr_check
+      failed_when: false
+      changed_when: false
+    
+    - name: Run traceroute using traceroute command
+      when: traceroute_check.rc == 0
+      block:
+        - name: Execute traceroute
+          command: traceroute -m {{ max_hops }} -w {{ trace_timeout }} {{ item }}
+          register: trace_result
+          failed_when: false
+          changed_when: false
+          loop: "{{ target_hosts }}"
+          loop_control:
+            label: "{{ item }}"
+        
+        - name: Extract traceroute results
+          set_fact:
+            trace_results: "{{ trace_results | default([]) + [{'host': item.item, 'output': item.stdout, 'status': 'SUCCESS' if item.rc == 0 else 'FAILED'}] }}"
+          loop: "{{ trace_result.results | default([]) }}"
+          when: trace_result.results is defined
+    
+    - name: Run traceroute using mtr (fallback)
+      when: traceroute_check.rc != 0 and mtr_check.rc == 0
+      block:
+        - name: Execute mtr
+          command: mtr --report --report-cycles 3 --max-ttl {{ max_hops }} {{ item }}
+          register: mtr_result
+          failed_when: false
+          changed_when: false
+          loop: "{{ target_hosts }}"
+          loop_control:
+            label: "{{ item }}"
+        
+        - name: Extract mtr results
+          set_fact:
+            trace_results: "{{ trace_results | default([]) + [{'host': item.item, 'output': item.stdout, 'status': 'SUCCESS' if item.rc == 0 else 'FAILED'}] }}"
+          loop: "{{ mtr_result.results | default([]) }}"
+          when: mtr_result.results is defined
+    
+    - name: Run traceroute using Python (fallback)
+      when: traceroute_check.rc != 0 and mtr_check.rc != 0
+      block:
+        - name: Execute Python traceroute
+          command: >
+            python3 -c "
+            import socket
+            import sys
+            
+            target = '{{ item }}'
+            max_hops = {{ max_hops }}
+            timeout = {{ trace_timeout }}
+            
+            try:
+                target_ip = socket.gethostbyname(target)
+                print(f'Tracing route to {target} ({target_ip})')
+                print(f'Maximum {max_hops} hops')
+                print('Note: Python traceroute requires root privileges for raw sockets')
+                print('Using basic connectivity test instead')
+                
+                # Simple connectivity test as fallback
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(timeout)
+                result = sock.connect_ex((target_ip, 80))
+                sock.close()
+                
+                if result == 0:
+                    print(f'Host {target_ip} is reachable')
+                    sys.exit(0)
+                else:
+                    print(f'Host {target_ip} is not reachable on port 80')
+                    sys.exit(1)
+            except Exception as e:
+                print(f'Error: {e}')
+                sys.exit(1)
+            "
+          register: python_trace_result
+          failed_when: false
+          changed_when: false
+          loop: "{{ target_hosts }}"
+          loop_control:
+            label: "{{ item }}"
+        
+        - name: Extract Python traceroute results
+          set_fact:
+            trace_results: "{{ trace_results | default([]) + [{'host': item.item, 'output': item.stdout, 'status': 'SUCCESS' if item.rc == 0 else 'FAILED'}] }}"
+          loop: "{{ python_trace_result.results | default([]) }}"
+          when: python_trace_result.results is defined
+    
+    - name: Calculate test statistics
+      set_fact:
+        total_traces: "{{ trace_results | length | default(0) }}"
+        successful_traces: "{{ trace_results | selectattr('status', 'equalto', 'SUCCESS') | list | length }}"
+        failed_traces: "{{ trace_results | selectattr('status', 'equalto', 'FAILED') | list | length }}"
+    
+    - name: Determine overall test status
+      set_fact:
+        test_status: "{{ 'SUCCESS' if successful_traces | int > 0 else 'FAILURE' }}"
+        test_message: "{{ 'Traceroute completed: ' + (successful_traces | string) + ' successful, ' + (failed_traces | string) + ' failed' }}"
+    
+    - name: Generate timestamp
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/timestamp.yml"
+    
+    - name: Prepare actionlog data structure
+      set_fact:
+        actionlog_data:
+          test_name: "Traceroute Test"
+          timestamp: "{{ timestamp }}"
+          host: "{{ inventory_hostname }}"
+          status: "{{ test_status }}"
+          message: "{{ test_message }}"
+          details:
+            target_hosts: "{{ target_hosts }}"
+            max_hops: "{{ max_hops }}"
+            timeout: "{{ trace_timeout }}"
+            tool_used: "{{ 'traceroute' if traceroute_check.rc == 0 else ('mtr' if mtr_check.rc == 0 else 'python3') }}"
+          metrics:
+            total_traces: "{{ total_traces }}"
+            successful_traces: "{{ successful_traces }}"
+            failed_traces: "{{ failed_traces }}"
+          validation:
+            traces_completed: "{{ 'PASS' if successful_traces | int > 0 else 'FAIL' }}"
+          full_output: "{{ trace_results | default([]) | to_nice_yaml }}"
+          playbook_metadata:
+            version: "{{ playbook_version }}"
+            author: "{{ playbook_author }}"
+            description: "{{ playbook_description }}"
+    
+    - name: Write test results to actionlog
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/write_actionlog.yml"
+      vars:
+        actionlog_filename: "traceroute_test_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}"
+    
+    - name: Display test results
+      debug:
+        msg:
+          - "Test Status: {{ test_status }}"
+          - "{{ test_message }}"
+          - "Total Traces: {{ total_traces }}"
+          - "Successful: {{ successful_traces }}"
+          - "Failed: {{ failed_traces }}"
+          - "Output Format: {{ output_format | default('text') }}"
+          - "Results saved to: {{ actionlog_dir }}/traceroute_test_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.{{ 'json' if (output_format | default('text')) == 'json' else 'txt' }}"

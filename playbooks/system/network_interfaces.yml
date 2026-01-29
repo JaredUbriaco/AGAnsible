@@ -1,0 +1,115 @@
+---
+# Network interfaces information - works on localhost
+- name: Network interfaces information
+  hosts: all
+  gather_facts: no
+  connection: local
+  
+  vars:
+    # Playbook metadata
+    playbook_version: "1.0.0"
+    playbook_author: "AGAnsible Team"
+    playbook_description: "Collect and display network interface information"
+    
+    # Playbook variables
+    actionlog_dir: "{{ playbook_dir }}/../../actionlog/system/network_interfaces"
+  
+  tasks:
+    - name: Setup actionlog directory
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/actionlog_setup.yml"
+    
+    - name: Get network interfaces using ip command
+      command: ip -4 addr show
+      register: ip_addr_result
+      failed_when: false
+      changed_when: false
+    
+    - name: Get network interfaces using ifconfig (fallback)
+      when: ip_addr_result.rc != 0
+      command: ifconfig -a
+      register: ifconfig_result
+      failed_when: false
+      changed_when: false
+    
+    - name: Get routing table
+      command: ip route show
+      register: route_result
+      failed_when: false
+      changed_when: false
+    
+    - name: Get default gateway
+      command: ip route | grep default || route -n | grep '^0.0.0.0' || echo "No default route found"
+      register: gateway_result
+      failed_when: false
+      changed_when: false
+    
+    - name: Get DNS servers
+      command: cat /etc/resolv.conf | grep nameserver | awk '{print $2}' || echo "No DNS servers found"
+      register: dns_result
+      failed_when: false
+      changed_when: false
+    
+    - name: Get network statistics
+      command: ss -s
+      register: ss_stats
+      failed_when: false
+      changed_when: false
+    
+    - name: Parse interface information
+      set_fact:
+        interfaces_info:
+          ip_addr_output: "{{ ip_addr_result.stdout | default(ifconfig_result.stdout | default('No interface information available')) }}"
+          routing_table: "{{ route_result.stdout | default('No routing information available') }}"
+          default_gateway: "{{ gateway_result.stdout | default('No default gateway found') }}"
+          dns_servers: "{{ dns_result.stdout | default('No DNS servers found') }}"
+          network_stats: "{{ ss_stats.stdout | default('No statistics available') }}"
+    
+    - name: Count active interfaces
+      set_fact:
+        active_interfaces: "{{ interfaces_info.ip_addr_output | regex_findall('inet [0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+') | length }}"
+    
+    - name: Determine test status
+      set_fact:
+        test_status: "{{ 'SUCCESS' if active_interfaces | int > 0 else 'FAILURE' }}"
+        test_message: "{{ 'Found ' + (active_interfaces | string) + ' active network interface(s)' if active_interfaces | int > 0 else 'No active interfaces found' }}"
+    
+    - name: Generate timestamp
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/timestamp.yml"
+    
+    - name: Prepare actionlog data structure
+      set_fact:
+        actionlog_data:
+          test_name: "Network Interfaces Information"
+          timestamp: "{{ timestamp }}"
+          host: "{{ inventory_hostname }}"
+          status: "{{ test_status }}"
+          message: "{{ test_message }}"
+          details:
+            active_interfaces_count: "{{ active_interfaces }}"
+            ip_addr_output: "{{ interfaces_info.ip_addr_output }}"
+            routing_table: "{{ interfaces_info.routing_table }}"
+            default_gateway: "{{ interfaces_info.default_gateway }}"
+            dns_servers: "{{ interfaces_info.dns_servers }}"
+          metrics:
+            active_interfaces: "{{ active_interfaces }}"
+          validation:
+            interfaces_found: "{{ 'PASS' if active_interfaces | int > 0 else 'FAIL' }}"
+          full_output: "{{ interfaces_info | to_nice_yaml }}"
+          playbook_metadata:
+            version: "{{ playbook_version }}"
+            author: "{{ playbook_author }}"
+            description: "{{ playbook_description }}"
+    
+    - name: Write test results to actionlog
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/write_actionlog.yml"
+      vars:
+        actionlog_filename: "network_interfaces_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}"
+    
+    - name: Display test results
+      debug:
+        msg:
+          - "Test Status: {{ test_status }}"
+          - "{{ test_message }}"
+          - "Active Interfaces: {{ active_interfaces }}"
+          - "Output Format: {{ output_format | default('text') }}"
+          - "Results saved to: {{ actionlog_dir }}/network_interfaces_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.{{ 'json' if (output_format | default('text')) == 'json' else 'txt' }}"

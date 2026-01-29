@@ -1,0 +1,156 @@
+---
+# SSL/TLS certificate validation - works on localhost
+- name: SSL/TLS certificate check
+  hosts: all
+  gather_facts: no
+  connection: local
+  
+  vars:
+    # Playbook metadata
+    playbook_version: "1.0.0"
+    playbook_author: "AGAnsible Team"
+    playbook_description: "Validate SSL/TLS certificates for HTTPS endpoints"
+    
+    # Playbook variables
+    actionlog_dir: "{{ playbook_dir }}/../../actionlog/system/ssl_cert_check"
+    target_urls: ["https://www.google.com", "https://github.com", "https://www.cloudflare.com"]
+    cert_timeout: 10
+  
+  tasks:
+    - name: Setup actionlog directory
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/actionlog_setup.yml"
+    
+    - name: Check if openssl is available
+      command: which openssl
+      register: openssl_check
+      failed_when: false
+      changed_when: false
+    
+    - name: Extract domain from URL
+      set_fact:
+        cert_results: "{{ cert_results | default([]) + [{'url': item, 'domain': item | regex_replace('https?://', '') | regex_replace('/.*', '')}] }}"
+      loop: "{{ target_urls }}"
+    
+    - name: Check SSL certificate using openssl
+      when: openssl_check.rc == 0
+      block:
+        - name: Get certificate information
+          command: >
+            echo | timeout {{ cert_timeout }} openssl s_client -showcerts -connect {{ item.domain }}:443 -servername {{ item.domain }} 2>&1
+          register: cert_info
+          failed_when: false
+          changed_when: false
+          loop: "{{ cert_results }}"
+          loop_control:
+            label: "{{ item.domain }}"
+        
+        - name: Extract certificate expiration
+          command: >
+            echo | timeout {{ cert_timeout }} openssl s_client -connect {{ item.item.domain }}:443 -servername {{ item.item.domain }} 2>&1 | openssl x509 -noout -dates 2>&1
+          register: cert_dates
+          failed_when: false
+          changed_when: false
+          loop: "{{ cert_info.results | default([]) }}"
+          loop_control:
+            label: "{{ item.item.domain }}"
+        
+        - name: Parse certificate results
+          set_fact:
+            cert_results: "{{ cert_results | default([]) | map('combine', {'status': 'VALID' if item.rc == 0 else 'ERROR', 'output': item.stdout + item.stderr}) | list }}"
+          loop: "{{ cert_info.results | default([]) }}"
+          when: cert_info.results is defined
+    
+    - name: Check SSL certificate using Python (fallback)
+      when: openssl_check.rc != 0
+      block:
+        - name: Validate SSL certificate
+          command: >
+            python3 -c "
+            import ssl
+            import socket
+            import sys
+            from datetime import datetime
+            
+            url = '{{ item.url }}'
+            domain = '{{ item.domain }}'
+            
+            try:
+                context = ssl.create_default_context()
+                with socket.create_connection((domain, 443), timeout={{ cert_timeout }}) as sock:
+                    with context.wrap_socket(sock, server_hostname=domain) as ssock:
+                        cert = ssock.getpeercert()
+                        print(f'{url} - VALID')
+                        print(f'Issuer: {cert.get(\"issuer\")}')
+                        print(f'Subject: {cert.get(\"subject\")}')
+                        print(f'Valid from: {cert.get(\"notBefore\")}')
+                        print(f'Valid until: {cert.get(\"notAfter\")}')
+                        sys.exit(0)
+            except Exception as e:
+                print(f'{url} - ERROR: {e}')
+                sys.exit(1)
+            "
+          register: cert_result_python
+          failed_when: false
+          changed_when: false
+          loop: "{{ cert_results }}"
+          loop_control:
+            label: "{{ item.domain }}"
+        
+        - name: Parse Python certificate results
+          set_fact:
+            cert_results: "{{ cert_results | default([]) | map('combine', {'status': 'VALID' if item.rc == 0 else 'ERROR', 'output': item.stdout}) | list }}"
+          loop: "{{ cert_result_python.results | default([]) }}"
+          when: cert_result_python.results is defined
+    
+    - name: Calculate test statistics
+      set_fact:
+        total_certs_tested: "{{ cert_results | length | default(0) }}"
+        valid_certs: "{{ cert_results | selectattr('status', 'equalto', 'VALID') | list | length }}"
+        invalid_certs: "{{ cert_results | selectattr('status', 'equalto', 'ERROR') | list | length }}"
+    
+    - name: Determine overall test status
+      set_fact:
+        test_status: "{{ 'SUCCESS' if valid_certs | int > 0 else 'FAILURE' }}"
+        test_message: "{{ 'SSL certificate check completed: ' + (valid_certs | string) + ' valid, ' + (invalid_certs | string) + ' invalid' }}"
+    
+    - name: Generate timestamp
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/timestamp.yml"
+    
+    - name: Prepare actionlog data structure
+      set_fact:
+        actionlog_data:
+          test_name: "SSL Certificate Check"
+          timestamp: "{{ timestamp }}"
+          host: "{{ inventory_hostname }}"
+          status: "{{ test_status }}"
+          message: "{{ test_message }}"
+          details:
+            target_urls: "{{ target_urls }}"
+            tool_used: "{{ 'openssl' if openssl_check.rc == 0 else 'python3' }}"
+          metrics:
+            total_certs_tested: "{{ total_certs_tested }}"
+            valid_certs: "{{ valid_certs }}"
+            invalid_certs: "{{ invalid_certs }}"
+          validation:
+            certificates_validated: "{{ 'PASS' if valid_certs | int > 0 else 'FAIL' }}"
+          full_output: "{{ cert_results | default([]) | to_nice_yaml }}"
+          playbook_metadata:
+            version: "{{ playbook_version }}"
+            author: "{{ playbook_author }}"
+            description: "{{ playbook_description }}"
+    
+    - name: Write test results to actionlog
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/write_actionlog.yml"
+      vars:
+        actionlog_filename: "ssl_cert_check_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}"
+    
+    - name: Display test results
+      debug:
+        msg:
+          - "Test Status: {{ test_status }}"
+          - "{{ test_message }}"
+          - "Total Certificates Tested: {{ total_certs_tested }}"
+          - "Valid Certificates: {{ valid_certs }}"
+          - "Invalid Certificates: {{ invalid_certs }}"
+          - "Output Format: {{ output_format | default('text') }}"
+          - "Results saved to: {{ actionlog_dir }}/ssl_cert_check_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.{{ 'json' if (output_format | default('text')) == 'json' else 'txt' }}"

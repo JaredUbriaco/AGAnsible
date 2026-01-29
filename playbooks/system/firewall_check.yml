@@ -1,0 +1,132 @@
+---
+# Firewall rules check - works on localhost
+- name: Firewall rules check
+  hosts: all
+  gather_facts: no
+  connection: local
+  
+  vars:
+    # Playbook metadata
+    playbook_version: "1.0.0"
+    playbook_author: "AGAnsible Team"
+    playbook_description: "Check local firewall configuration and rules"
+    
+    # Playbook variables
+    actionlog_dir: "{{ playbook_dir }}/../../actionlog/system/firewall_check"
+  
+  tasks:
+    - name: Setup actionlog directory
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/actionlog_setup.yml"
+    
+    - name: Check if iptables is available
+      command: which iptables
+      register: iptables_check
+      failed_when: false
+      changed_when: false
+    
+    - name: Check if nftables is available
+      command: which nft
+      register: nft_check
+      failed_when: false
+      changed_when: false
+    
+    - name: Check if ufw is available
+      command: which ufw
+      register: ufw_check
+      failed_when: false
+      changed_when: false
+    
+    - name: Get iptables rules
+      when: iptables_check.rc == 0
+      block:
+        - name: List iptables rules
+          command: iptables -L -n -v 2>/dev/null || echo "Permission denied - run with sudo"
+          register: iptables_rules
+          failed_when: false
+          changed_when: false
+        
+        - name: Get iptables rule count
+          command: iptables -L -n 2>/dev/null | grep -c "^[A-Z]" || echo "0"
+          register: iptables_count
+          failed_when: false
+          changed_when: false
+    
+    - name: Get nftables rules
+      when: nft_check.rc == 0
+      block:
+        - name: List nftables rules
+          command: nft list ruleset 2>/dev/null || echo "Permission denied - run with sudo"
+          register: nft_rules
+          failed_when: false
+          changed_when: false
+    
+    - name: Get ufw status
+      when: ufw_check.rc == 0
+      block:
+        - name: Get ufw status
+          command: ufw status verbose
+          register: ufw_status
+          failed_when: false
+          changed_when: false
+    
+    - name: Compile firewall information
+      set_fact:
+        firewall_info:
+          iptables_available: "{{ iptables_check.rc == 0 }}"
+          nftables_available: "{{ nft_check.rc == 0 }}"
+          ufw_available: "{{ ufw_check.rc == 0 }}"
+          iptables_rules: "{{ iptables_rules.stdout | default('Not available') if iptables_check.rc == 0 else 'Not installed' }}"
+          iptables_rule_count: "{{ iptables_count.stdout | default('0') if iptables_check.rc == 0 else '0' }}"
+          nft_rules: "{{ nft_rules.stdout | default('Not available') if nft_check.rc == 0 else 'Not installed' }}"
+          ufw_status: "{{ ufw_status.stdout | default('Not available') if ufw_check.rc == 0 else 'Not installed' }}"
+    
+    - name: Determine firewall tool in use
+      set_fact:
+        firewall_tool: "{{ 'iptables' if firewall_info.iptables_available else ('nftables' if firewall_info.nftables_available else ('ufw' if firewall_info.ufw_available else 'none')) }}"
+    
+    - name: Determine test status
+      set_fact:
+        test_status: "{{ 'SUCCESS' if firewall_info.iptables_available or firewall_info.nftables_available or firewall_info.ufw_available else 'FAILURE' }}"
+        test_message: "{{ 'Firewall check completed. Tool in use: ' + firewall_tool }}"
+    
+    - name: Generate timestamp
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/timestamp.yml"
+    
+    - name: Prepare actionlog data structure
+      set_fact:
+        actionlog_data:
+          test_name: "Firewall Check"
+          timestamp: "{{ timestamp }}"
+          host: "{{ inventory_hostname }}"
+          status: "{{ test_status }}"
+          message: "{{ test_message }}"
+          details:
+            firewall_tool: "{{ firewall_tool }}"
+            iptables_available: "{{ firewall_info.iptables_available }}"
+            nftables_available: "{{ firewall_info.nftables_available }}"
+            ufw_available: "{{ firewall_info.ufw_available }}"
+            iptables_rule_count: "{{ firewall_info.iptables_rule_count }}"
+          metrics:
+            rules_found: "{{ firewall_info.iptables_rule_count | int }}"
+          validation:
+            firewall_detected: "{{ 'PASS' if firewall_info.iptables_available or firewall_info.nftables_available or firewall_info.ufw_available else 'FAIL' }}"
+          full_output: "{{ firewall_info | to_nice_yaml }}"
+          playbook_metadata:
+            version: "{{ playbook_version }}"
+            author: "{{ playbook_author }}"
+            description: "{{ playbook_description }}"
+    
+    - name: Write test results to actionlog
+      import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/write_actionlog.yml"
+      vars:
+        actionlog_filename: "firewall_check_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}"
+    
+    - name: Display test results
+      debug:
+        msg:
+          - "Test Status: {{ test_status }}"
+          - "{{ test_message }}"
+          - "Firewall Tool: {{ firewall_tool }}"
+          - "IPTables Rules: {{ firewall_info.iptables_rule_count }}"
+          - "Output Format: {{ output_format | default('text') }}"
+          - "Results saved to: {{ actionlog_dir }}/firewall_check_{{ inventory_hostname }}_{{ timestamp | replace(':', '-') | replace('+', '-') }}.{{ 'json' if (output_format | default('text')) == 'json' else 'txt' }}"

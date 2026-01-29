@@ -6,6 +6,7 @@ __pycache__/
 
 # Actionlog files (optional - remove if you want to track test results)
 actionlog/**/*.txt
+actionlog/**/*.json
 
 # Sensitive data
 group_vars/*/vault
