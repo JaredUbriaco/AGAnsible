@@ -34,7 +34,7 @@ The AGAnsible suite provides:
 - **Comprehensive validation** - Success/failure detection for all tests
 - **Automatic logging** - Detailed actionlog files for every execution
 - **Ready-to-use playbooks** - Network, system, and connectivity tests
-- **Full documentation** - Complete guides for setup and usage
+- **Full documentation** - Complete guides for setup and usage (see **[HowTo.md](HowTo.md)** for a full walkthrough)
 
 <a id="prerequisites"></a>
 ## 📦 Prerequisites
@@ -194,6 +194,7 @@ ansible-playbook -i inventories/cisco.ini playbooks/cisco/ssh_test.yml
 ```
 AGAnsible/
 ├── README.md                    # This file - main documentation
+├── HowTo.md                     # Full verbose how-to walkthrough
 ├── WSL_SETUP.md                 # Complete WSL setup guide
 ├── QUICK_START.md               # Quick reference
 ├── QUICK_TEST.md                # Quick testing guide
@@ -610,6 +611,7 @@ ansible-playbook playbooks/category/my_test.yml
 ## 📚 Additional Resources
 
 ### Documentation Files
+- **[HowTo.md](HowTo.md)** - Full verbose how-to: setup, run tests, review results (start here for a complete walkthrough)
 - **[WSL_SETUP.md](WSL_SETUP.md)** - Complete WSL2 setup guide
 - **[REQUIREMENTS.md](REQUIREMENTS.md)** - System requirements and dependencies
 - **[COMPLETE_DEPENDENCIES.md](COMPLETE_DEPENDENCIES.md)** - Detailed dependency list

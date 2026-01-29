@@ -21,7 +21,7 @@
 **Status**: ✅ **FIXED**
 
 **Issue 3**: Playbooks used relative paths `../../../roles/common/tasks/` which resolved incorrectly in WSL  
-**Impact**: Ansible couldn't find role tasks (looking in `/home/tom/roles` instead of `/home/tom/ansible/roles`)  
+**Impact**: Ansible couldn't find role tasks (looking in `~/roles` instead of project `./roles`)  
 **Fix**: Changed all `import_tasks: ../../../roles/common/tasks/` to `import_tasks: "{{ playbook_dir }}/../../roles/common/tasks/"`  
 **Status**: ✅ **FIXED**
 
@@ -30,7 +30,7 @@
 **Fix**: Changed `stdout_callback = yaml` to `stdout_callback = default`  
 **Status**: ✅ **FIXED**
 
-**Note**: In WSL environment, using `{{ playbook_dir }}` variable ensures paths resolve correctly from the playbook's location. The playbook_dir is `/home/tom/ansible/playbooks/base/`, so we need `../../` to go up to `/home/tom/ansible/` then into `roles/`.
+**Note**: In WSL (or any environment), using `{{ playbook_dir }}` ensures paths resolve from the playbook's location. From `playbooks/base/`, `../../` goes up to the project root, then into `roles/`.
 
 ---
 

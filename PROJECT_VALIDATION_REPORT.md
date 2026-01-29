@@ -544,7 +544,7 @@ collections:
 **Previously identified issues:**
 
 1. ~~⚠️ Hardcoded path in `ansible.cfg`~~ - ✅ **FIXED**
-   - Changed `roles_path = /home/tom/ansible/roles` to `roles_path = ./roles`
+   - Changed `roles_path = <absolute-path>/roles` to `roles_path = ./roles` (portable)
    - Status: Resolved in commit `07a3a90`
 
 **Current Status**: ✅ **NO ISSUES FOUND**

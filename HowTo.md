@@ -1,6 +1,6 @@
 # AGAnsible: How-To — Full Verbose Instructions
 
-This document continues and expands from **roughdraft.md**. It provides full, step-by-step instructions for every phase of the AGAnsible project: environment setup, installation, verification, running tests, reviewing results, and troubleshooting.
+This document provides full, step-by-step instructions for every phase of the AGAnsible project: environment setup, installation, verification, running tests, reviewing results, and troubleshooting.
 
 ---
 
@@ -807,7 +807,6 @@ cd ~ && git clone https://github.com/JaredUbriaco/AGAnsible.git && cd AGAnsible 
 
 | Document | Purpose |
 |----------|---------|
-| **[roughdraft.md](roughdraft.md)** | High-level “how it works” walkthrough (this How-To expands on it). |
 | **[README.md](README.md)** | Project overview, table of contents, and main links. |
 | **[WSL_SETUP.md](WSL_SETUP.md)** | Detailed WSL2 setup for Windows. |
 | **[LOCALHOST_TESTS.md](LOCALHOST_TESTS.md)** | List of localhost-capable playbooks and usage. |

@@ -93,7 +93,7 @@ ansible_python_interpreter=/usr/bin/python3
 
 - All playbooks use `{{ playbook_dir }}` variable
 - All scripts use relative paths from project root
-- No references to `/home/tom/ansible` or similar absolute paths
+- No references to `/home/username/project` or similar user-specific absolute paths
 - Project can be cloned to any directory
 
 **Example**:
@@ -102,7 +102,7 @@ ansible_python_interpreter=/usr/bin/python3
 actionlog_dir: "{{ playbook_dir }}/../../actionlog/system/curl_test"
 
 # ❌ Would NOT be portable (not used in project)
-actionlog_dir: "/home/tom/ansible/actionlog/system/curl_test"
+actionlog_dir: "/home/username/ansible/actionlog/system/curl_test"
 ```
 
 ### 2. ✅ Script Portability
