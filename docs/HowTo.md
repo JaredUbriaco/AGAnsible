@@ -717,7 +717,7 @@ ansible-playbook -i inventories/my_cisco.ini playbooks/cisco/ssh_test.yml --vaul
 - **By group:** `group_vars/<group>/vault.yml` (e.g. `group_vars/cisco-devices/vault.yml`). Used for all hosts in that group.
 - **By host:** `host_vars/<hostname>/vault.yml`. Used for a single host.
 
-For more detail and security notes, see **[VAULT.md](VAULT.md)** and **vault/readmevault.md**.
+For more detail and security notes, see **[VAULT.md](VAULT.md)** and **vault/VAULT_README.md**.
 
 ---
 

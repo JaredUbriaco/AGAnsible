@@ -158,4 +158,4 @@ Ansible automatically loads `group_vars/<group>/vault.yml` when present; ensure 
 
 See **../vault/vault.example.yml** for an example list of variable names. Copy that structure into your vault file; do not put real secrets in the example.
 
-For more detail, see **../vault/readmevault.md**.
+For more detail, see **../vault/VAULT_README.md**.

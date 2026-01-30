@@ -199,7 +199,7 @@ AGAnsible/
 │   ├── VAULT.md                 # Ansible Vault usage and setup
 │   ├── WSL_SETUP.md             # WSL setup guide (Windows)
 │   └── REQUIREMENTS.md          # System requirements and dependencies
-├── vault/                       # Vault template (vault.example.yml, readmevault.md)
+├── vault/                       # Vault template (vault.example.yml, VAULT_README.md)
 ├── install.sh                   # Installation script
 ├── verify.sh                    # Verification script
 ├── test_all.sh                  # Test all playbooks
@@ -355,7 +355,7 @@ All run output lives under `actionlog/`:
 - **Suite run logs** (from `./test_all.sh` or `./test_localhost.sh`): `actionlog/test_suite/all/` or `actionlog/test_suite/localhost/` — one `.log` per test in that run.
 - **Script summaries**: `actionlog/scripts/` (e.g. verify, install, test-suite summary).
 
-See **actionlog/README.md** for the full directory tree and labels.
+See **actionlog/ACTIONLOG_README.md** for the full directory tree and labels.
 
 ### Viewing Results
 

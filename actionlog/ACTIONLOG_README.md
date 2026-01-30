@@ -17,7 +17,7 @@ So: **playbook results** live under **category folders** (`base/`, `system/`, `c
 
 ```
 actionlog/
-├── README.md                 # This file
+├── ACTIONLOG_README.md       # This file
 │
 ├── test_suite/               # Logs from running the test scripts (test_all.sh / test_localhost.sh)
 │   ├── all/                  # Run ./test_all.sh  → per-test .log files here
