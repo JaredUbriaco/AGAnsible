@@ -45,7 +45,7 @@ Ansible module for parsing CDP/LLDP neighbor output and extracting topology info
 ```yaml
 - name: Parse topology
   network_topology:
-    neighbor_output: "{{ cdp_output.stdout }}"
+    neighbor_output: "{{ cdp_output.stdout[0] }}"   # list from ios_command; [0] = first command output
     protocol: cdp
     device_name: "{{ inventory_hostname }}"
   register: topology_result
@@ -106,6 +106,28 @@ Each topology JSON file contains:
 }
 ```
 
+## Validation: CDP/LLDP → Topology Generation Flow
+
+The playbook correctly flows into topology generation:
+
+1. **Playbook** (`discover_topology.yml`) runs CDP or LLDP per platform:
+   - Cisco IOS: `show cdp neighbors detail` or `show lldp neighbors detail`
+   - Juniper JunOS / Arista EOS: `show lldp neighbors detail`
+2. **Module** (`library/network_topology.py`) parses the raw output and returns structured data: `device`, `protocol`, `neighbor_count`, `neighbors` (each with `device_id`, `local_interface`, `remote_interface`, `platform`, and optionally `capabilities`).
+3. **Playbook** adds device-level `platform` (brand) from `ansible_network_os` (e.g. Cisco IOS, Juniper JunOS, Arista EOS) so visualization can show it on each node.
+4. **Export**: Playbook writes `topology_{{ inventory_hostname }}_{{ timestamp }}.json` to `topology_output_dir` (default `topology/`).
+5. **Visualization** (`scripts/visualize_topology.py`) reads all `topology_*.json` in that directory and generates SVG/PNG/DOT/text with:
+   - Node order: Core <> Access <> Access (daisy chain) when device names follow that pattern
+   - Interface labels on each link (local ↔ remote) for manual validation
+   - Brand/platform on each node when present in the JSON
+
+**Expected JSON shape** (so visualization works):
+
+- Top level: `device`, `protocol`, `neighbor_count`, `neighbors`, and optionally `platform`
+- Each neighbor: `device_id`, `local_interface`, `remote_interface`, and optionally `platform`, `capabilities`
+
+The module and playbook produce this shape; the playbook injects top-level `platform` for the device.
+
 ## Workflow
 
 1. **Discover Topology**:
@@ -113,9 +135,9 @@ Each topology JSON file contains:
    ansible-playbook -i inventories/example_cisco.ini playbooks/topology/discover_topology.yml
    ```
 
-2. **Visualize Results**:
+2. **Visualize Results** (from project root):
    ```bash
-   python3 scripts/visualize_topology.py topology/ png
+   python3 scripts/visualize_topology.py topology svg   # or text, dot, png
    ```
 
 3. **Review Topology Files**:

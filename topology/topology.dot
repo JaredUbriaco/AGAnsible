@@ -1,0 +1,9 @@
+digraph NetworkTopology {
+  rankdir=LR;
+  node [shape=box];
+
+  "access-sw1" -> "core-sw1" [label="GigabitEthernet0/1 <-> GigabitEthernet0/1"];
+  "access-sw1" -> "access-sw2" [label="GigabitEthernet0/2 <-> GigabitEthernet0/1"];
+  "core-sw1" -> "access-sw1" [label="GigabitEthernet0/1 <-> GigabitEthernet0/1"];
+  "access-sw2" -> "access-sw1" [label="GigabitEthernet0/1 <-> GigabitEthernet0/2"];
+}

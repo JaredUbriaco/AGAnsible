@@ -114,6 +114,20 @@
         test_message: "{{ 'Topology discovery successful' if discovery_successful else 'Topology discovery failed - CDP/LLDP not available or not configured' }}"
         topology_data: "{{ topology_result.topology if topology_result is defined and topology_result.topology is defined else {} }}"
     
+    # Add device-level platform (brand) so visualization can show it; map ansible_network_os to display name
+    - name: Set device platform for topology export
+      set_fact:
+        topology_data: "{{ topology_data | combine({'platform': device_platform}) }}"
+      vars:
+        network_os_platform_map:
+          cisco.ios.ios: "Cisco IOS"
+          junipernetworks.junos.junos: "Juniper JunOS"
+          arista.eos.eos: "Arista EOS"
+        device_platform: "{{ network_os_platform_map[ansible_network_os] | default('') }}"
+      when:
+        - discovery_successful
+        - topology_data | length > 0
+    
     - name: Export topology to JSON file
       copy:
         content: "{{ topology_data | to_nice_json }}"

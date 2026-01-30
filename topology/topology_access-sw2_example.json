@@ -1,0 +1,15 @@
+{
+  "device": "access-sw2",
+  "protocol": "cdp",
+  "platform": "Cisco IOS",
+  "neighbor_count": 1,
+  "neighbors": [
+    {
+      "device_id": "access-sw1",
+      "local_interface": "GigabitEthernet0/1",
+      "remote_interface": "GigabitEthernet0/2",
+      "platform": "Cisco IOS",
+      "capabilities": ["Switch"]
+    }
+  ]
+}

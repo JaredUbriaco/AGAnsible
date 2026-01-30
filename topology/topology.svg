@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 300" width="560" height="300">
+<style>.node-name { font: 14px sans-serif; font-weight: bold; } .node-platform { font: 11px sans-serif; fill: #555; } .edge-label { font: 11px sans-serif; fill: #333; }</style>
+  <line x1="280.0" y1="150" x2="95.0" y2="150" stroke="#333" stroke-width="2"/>
+  <line x1="280.0" y1="150" x2="465.0" y2="150" stroke="#333" stroke-width="2"/>
+  <rect x="25.0" y="122.0" width="140" height="56" fill="#e0e8f0" stroke="#333"/>
+  <text x="95.0" y="144" class="node-name" text-anchor="middle">core-sw1</text>
+  <text x="95.0" y="160" class="node-platform" text-anchor="middle">Cisco IOS</text>
+  <rect x="210.0" y="122.0" width="140" height="56" fill="#e0e8f0" stroke="#333"/>
+  <text x="280.0" y="144" class="node-name" text-anchor="middle">access-sw1</text>
+  <text x="280.0" y="160" class="node-platform" text-anchor="middle">Cisco IOS</text>
+  <rect x="395.0" y="122.0" width="140" height="56" fill="#e0e8f0" stroke="#333"/>
+  <text x="465.0" y="144" class="node-name" text-anchor="middle">access-sw2</text>
+  <text x="465.0" y="160" class="node-platform" text-anchor="middle">Cisco IOS</text>
+  <text x="187.5" y="134.0" class="edge-label" text-anchor="middle">(Gi0/1 ↔ Gi0/1)</text>
+  <text x="372.5" y="134.0" class="edge-label" text-anchor="middle">(Gi0/2 ↔ Gi0/1)</text>
+</svg>
