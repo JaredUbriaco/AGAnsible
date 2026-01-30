@@ -204,7 +204,8 @@ AGAnsible/
 ├── verify.sh                    # Verification script
 ├── test_all.sh                  # Test all playbooks
 ├── test_localhost.sh            # Test localhost-capable playbooks only
-├── agansible                    # CLI wrapper (ansible, vault, etc.)
+├── menu.sh                      # Interactive menu (pick one playbook or test suite)
+├── agansible                    # CLI wrapper (install, verify, menu, test, vault)
 ├── ansible.cfg                  # Ansible configuration
 ├── requirements.yml            # Ansible Galaxy collections
 │
@@ -348,19 +349,13 @@ ansible-playbook -i inventories/myhosts.ini playbooks/base/ping_test.yml
 <a id="actionlog-system"></a>
 ## 📊 Actionlog System
 
-All playbook executions automatically create detailed log files in the `actionlog/` directory.
+All run output lives under `actionlog/`:
 
-### Structure
-```
-actionlog/
-├── base/
-│   └── ping_test/          # Ping test results
-├── cisco/
-│   └── ssh_test/           # SSH test results
-└── system/
-    ├── curl_test/          # Curl test results
-    └── dns_test/           # DNS test results
-```
+- **Playbook results** (one file per run): `actionlog/<category>/<playbook>/` (e.g. `actionlog/base/ping_test/`, `actionlog/system/curl_test/`). Created when you run a playbook (from the menu, CLI, or test scripts).
+- **Suite run logs** (from `./test_all.sh` or `./test_localhost.sh`): `actionlog/test_suite/all/` or `actionlog/test_suite/localhost/` — one `.log` per test in that run.
+- **Script summaries**: `actionlog/scripts/` (e.g. verify, install, test-suite summary).
+
+See **actionlog/README.md** for the full directory tree and labels.
 
 ### Viewing Results
 
@@ -442,6 +437,18 @@ Failed: 0
 
 **Note**: `test_localhost.sh` is recommended for quick validation as it only tests playbooks that can run on localhost without requiring network devices or remote infrastructure.
 
+### Interactive menu (pick one option)
+
+To run a single playbook (e.g. ping test) or a test suite without memorizing commands:
+
+```bash
+./menu.sh
+# or
+agansible menu
+```
+
+You get a numbered menu: run one playbook, run all localhost tests, run all tests, or verify. In this project, **each test is an Ansible playbook** (a YAML file that runs tasks); the menu lists them so you can choose by number.
+
 ### Individual Playbook Tests
 
 ```bash
@@ -512,7 +519,7 @@ sudo pip3 install --break-system-packages ansible
 sudo -v
 
 # Check file permissions
-chmod +x install.sh verify.sh test_all.sh test_localhost.sh
+chmod +x install.sh verify.sh test_all.sh test_localhost.sh menu.sh
 
 # Fix actionlog permissions if needed
 sudo chown -R $USER:$USER actionlog/
@@ -608,7 +615,7 @@ ansible-playbook playbooks/category/my_test.yml
 - **[docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)** - System requirements and dependencies
 - **[docs/VAULT.md](docs/VAULT.md)** - Ansible Vault setup and usage for secrets
 
-**Optional:** Use the `agansible` CLI: `agansible install`, `agansible verify`, `agansible test`, `agansible vault` (run `agansible help`). To lint playbooks: `./scripts/lint.sh` or `pre-commit install` then `pre-commit run`.
+**Optional:** Use the `agansible` CLI: `agansible install`, `agansible verify`, `agansible menu` (interactive pick-one menu), `agansible test`, `agansible vault` (run `agansible help`). To lint playbooks: `./scripts/lint.sh` or `pre-commit install` then `pre-commit run`.
 
 ### External Resources
 - [Ansible Documentation](https://docs.ansible.com/)

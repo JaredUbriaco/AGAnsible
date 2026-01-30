@@ -1,105 +1,89 @@
 # Actionlog Directory
 
-This directory contains test results and logs for all Ansible playbook executions.
+This directory holds **all run output**: per-playbook results, test-suite run logs, and script summaries. Everything is under `actionlog/` so you have one place to look.
 
-## Structure
+## How it’s organized
+
+| What ran | Where output goes | What you see |
+|----------|-------------------|--------------|
+| **One playbook** (e.g. from menu or `ansible-playbook playbooks/base/ping_test.yml`) | `actionlog/<category>/<playbook>/` | One result file per run (e.g. `ping_test_localhost_2026-01-28....txt` or `.json`) |
+| **All localhost tests** (`./test_localhost.sh`) | Suite logs: `actionlog/test_suite/localhost/` | One `.log` per test in that run; playbook results still in `actionlog/base/`, `actionlog/system/`, etc. |
+| **All tests** (`./test_all.sh`) | Suite logs: `actionlog/test_suite/all/` | Same idea: per-test `.log` files for that run; playbook results in category folders |
+| **Script summaries** (verify, install, test suite summary) | `actionlog/scripts/` | Text summaries (e.g. `localhost_tests_*.txt`, `test_suite_*.txt`) |
+
+So: **playbook results** live under **category folders** (`base/`, `system/`, `cisco/`, etc.). **Suite run logs** (from `test_all.sh` or `test_localhost.sh`) live under **test_suite/all/** or **test_suite/localhost/**.
+
+## Directory structure
 
 ```
 actionlog/
-├── base/                      # Agnostic test results
-│   └── ping_test/            # Ping test results
+├── README.md                 # This file
 │
-├── cisco/                     # Cisco-specific test results
-│   └── ssh_test/              # SSH connectivity test results
+├── test_suite/               # Logs from running the test scripts (test_all.sh / test_localhost.sh)
+│   ├── all/                  # Run ./test_all.sh  → per-test .log files here
+│   └── localhost/            # Run ./test_localhost.sh  → per-test .log files here
 │
-├── system/                    # System-level test results
-│   ├── curl_test/             # Curl/HTTP test results
-│   └── dns_test/              # DNS resolution test results
+├── scripts/                  # Summaries from install.sh, verify.sh, test_*.sh
+│   └── *.txt                 # e.g. localhost_tests_<timestamp>.txt, test_suite_<timestamp>.txt
 │
-├── multi-vendor/              # Multi-vendor operations
-│   └── config_backup/         # Configuration backup results
+├── base/                     # Results from playbooks in playbooks/base/
+│   └── ping_test/            # ping_test_localhost_<timestamp>.{txt,json}
 │
-├── network/                   # Network protocol monitoring
-│   ├── bgp_status/            # BGP status monitoring
-│   ├── ospf_status/           # OSPF status monitoring
-│   ├── mpls_lsp/              # MPLS LSP monitoring
-│   └── performance_test/      # Network performance testing
+├── system/                   # Results from playbooks in playbooks/system/
+│   ├── curl_test/
+│   ├── dns_test/
+│   ├── port_scan/
+│   ├── network_interfaces/
+│   ├── ssl_cert_check/
+│   ├── firewall_check/
+│   ├── network_stats/
+│   └── traceroute_test/
 │
-└── topology/                  # Network topology discovery
-    └── discover_topology/     # Topology discovery results
+├── cisco/                    # Results from playbooks in playbooks/cisco/
+│   └── ssh_test/
+│
+├── network/                  # Results from playbooks in playbooks/network/
+│   ├── bgp_status/
+│   ├── ospf_status/
+│   ├── mpls_lsp/
+│   └── performance_test/
+│
+├── multi-vendor/
+│   └── config_backup/
+│
+└── topology/
+    └── discover_topology/
 ```
 
-## File Naming Convention
+## Terminology
 
-All actionlog files follow this pattern:
-- Format: `{test_name}_{hostname}_{timestamp}.{txt|json}`
-- Extension: `.txt` for text format, `.json` for JSON format
+- **Playbook** = one YAML file (e.g. `playbooks/base/ping_test.yml`) that runs a set of tasks. In this project, each “test” is a playbook.
+- **Test run** = one execution of a playbook; it produces one result file under `actionlog/<category>/<playbook>/`.
+- **Suite run** = running `test_all.sh` or `test_localhost.sh`; it produces logs under `actionlog/test_suite/all/` or `test_suite/localhost/` plus playbook results in the category folders.
 
-Examples:
-- `ping_test_localhost_2026-01-22T10-30-45-00-00.txt`
-- `ping_test_localhost_2026-01-22T10-30-45-00-00.json` (when `output_format=json`)
-- `curl_test_server1_2026-01-22T10-30-45-00-00.txt`
-- `bgp_status_router1_2026-01-22T10-30-45-00-00.json`
-- `performance_test_localhost_2026-01-22T10-30-45-00-00.json`
+## File naming (playbook results)
 
-## File Contents
+- Pattern: `{playbook_name}_{hostname}_{timestamp}.{txt|json}`
+- Examples: `ping_test_localhost_2026-01-28T20-00-29-06-00.txt`, `curl_test_localhost_...json`
 
-Each test result file contains:
-- Test execution timestamp
-- Test status (SUCCESS/FAILURE)
-- Detailed validation results
-- Full output from test execution
-- Pass/Fail indicators for each validation check
+## Viewing results
 
-## Viewing Results
-
-To view the latest test results:
 ```bash
-# Latest ping test
+# Latest ping test result (from any run: menu, test_localhost, or test_all)
 ls -t actionlog/base/ping_test/*.{txt,json} 2>/dev/null | head -1 | xargs cat
 
-# Latest SSH test
-ls -t actionlog/cisco/ssh_test/*.{txt,json} 2>/dev/null | head -1 | xargs cat
+# Latest suite run logs (localhost tests)
+ls -t actionlog/test_suite/localhost/*.log 2>/dev/null | head -5
 
-# Latest curl test
-ls -t actionlog/system/curl_test/*.{txt,json} 2>/dev/null | head -1 | xargs cat
-
-# Latest DNS test
-ls -t actionlog/system/dns_test/*.{txt,json} 2>/dev/null | head -1 | xargs cat
-
-# Latest BGP status
-ls -t actionlog/network/bgp_status/*.{txt,json} 2>/dev/null | head -1 | xargs cat
-
-# Latest performance test
-ls -t actionlog/network/performance_test/*.{txt,json} 2>/dev/null | head -1 | xargs cat
+# Latest suite run logs (all tests)
+ls -t actionlog/test_suite/all/*.log 2>/dev/null | head -5
 ```
 
-## Output Formats
+## Output formats
 
-All playbooks support multiple output formats:
+Playbook result files can be:
 
-### Text Format (Default)
-- Human-readable text files
-- Easy to read and parse manually
-- Extension: `.txt`
+- **Text (default)** – `.txt`, human-readable
+- **JSON** – `.json`, e.g. when you pass `-e output_format=json` or use `test_localhost.sh --json`
 
-### JSON Format
-- Structured JSON data
-- Easy to parse programmatically
-- Supports schema validation
-- Extension: `.json`
-
-### Both Formats
-- Generate both text and JSON files
-- Use `output_format: both` in playbook vars
-
-## Standardization
-
-**✅ All playbooks use standardized actionlog system:**
-- Consistent format across all playbooks
-- Same data structure (test_name, timestamp, status, metrics, validation)
-- Support for JSON output
-- Schema validation capability
-- Centralized logging via `write_actionlog.yml` task
-
-**Total Playbooks with Actionlog**: 10/10 (100%)
+Both formats use the same structure (test name, timestamp, status, metrics, validation). JSON can be validated with the schemas in `schemas/`.

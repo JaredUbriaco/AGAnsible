@@ -26,8 +26,8 @@ FAILURES=0
 TESTS_RUN=0
 TEST_RESULTS=()
 
-# Create log directory
-LOG_DIR="actionlog/test_suite"
+# Create log directory (suite run logs; playbook results go to actionlog/<category>/<playbook>/)
+LOG_DIR="actionlog/test_suite/all"
 mkdir -p "$LOG_DIR"
 TIMESTAMP=$(date -Iseconds | tr ':' '-')
 LOG_FILE="$LOG_DIR/test_suite_${TIMESTAMP}.log"

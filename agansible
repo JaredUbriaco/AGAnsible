@@ -50,6 +50,9 @@ ${GREEN}COMMANDS:${NC}
     ${CYAN}list${NC}                List available playbooks
         Shows all playbooks organized by category
 
+    ${CYAN}menu${NC}                Interactive text menu
+        Pick one option: run a single playbook, run all localhost tests, run all tests, or verify
+
     ${CYAN}vault${NC}               Ansible Vault operations (delegates to ansible-vault)
         create <file>         Create encrypted vault file
         edit <file>           Edit encrypted vault file
@@ -63,6 +66,7 @@ ${GREEN}COMMANDS:${NC}
 ${GREEN}EXAMPLES:${NC}
     agansible install
     agansible verify
+    agansible menu              # Interactive menu: pick one playbook or test suite
     agansible test
     agansible vault create group_vars/cisco-devices/vault.yml
     agansible vault edit group_vars/cisco-devices/vault.yml
@@ -161,6 +165,16 @@ cmd_run() {
     
     echo -e "${BLUE}Running playbook: $playbook${NC}"
     ansible-playbook "$playbook" "$@"
+}
+
+# Menu command (interactive text UI)
+cmd_menu() {
+    if [ -f "./menu.sh" ]; then
+        bash ./menu.sh "$@"
+    else
+        echo -e "${RED}Error: menu.sh not found${NC}"
+        exit 1
+    fi
 }
 
 # List command
@@ -284,6 +298,9 @@ main() {
             ;;
         list)
             cmd_list "$@"
+            ;;
+        menu)
+            cmd_menu "$@"
             ;;
         vault)
             cmd_vault "$@"
