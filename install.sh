@@ -319,7 +319,7 @@ if [ ${#FAILURES[@]} -eq 0 ]; then
     echo "Next steps:"
     echo "  1. Verify installation: ./verify.sh"
     echo "  2. Run a test: ansible-playbook playbooks/base/ping_test.yml"
-    echo "  3. Check README.md and WSL_SETUP.md for more information"
+    echo "  3. Check README.md and docs/WSL_SETUP.md for more information"
     log_installation_result "SUCCESS" > /dev/null
     echo "Actionlog: $(log_installation_result "SUCCESS")"
     exit 0

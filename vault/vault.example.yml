@@ -1,0 +1,20 @@
+---
+# Ansible Vault - Example variable template (DO NOT put real secrets here)
+# Copy this file to group_vars/<group>/vault.yml or host_vars/<host>/vault.yml,
+# fill in your values, then encrypt: ansible-vault create group_vars/<group>/vault.yml
+#
+# The encrypted file will be ignored by git (.gitignore: group_vars/*/vault, *.vault).
+#
+# To encrypt the SSH password: (1) Put it here and encrypt the whole file with
+# ansible-vault create/edit; or (2) Use ansible-vault encrypt_string 'password' --name ansible_password
+# and paste the !vault | block here. See docs/VAULT.md "Encrypting the SSH password".
+
+# SSH / network device credentials (used by playbooks that need device access)
+ansible_user: "your_username"
+ansible_password: "your_ssh_password"
+ansible_become: yes
+ansible_become_method: enable
+ansible_become_password: "your_enable_password"
+
+# Optional: API keys or other secrets
+# api_key: "your_api_key"

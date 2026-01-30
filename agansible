@@ -50,6 +50,12 @@ ${GREEN}COMMANDS:${NC}
     ${CYAN}list${NC}                List available playbooks
         Shows all playbooks organized by category
 
+    ${CYAN}vault${NC}               Ansible Vault operations (delegates to ansible-vault)
+        create <file>         Create encrypted vault file
+        edit <file>           Edit encrypted vault file
+        view <file>           View decrypted vault file
+        encrypt-string [str]  Encrypt a string (use --name 'var_name' for YAML name)
+
     ${CYAN}version${NC}             Show version information
 
     ${CYAN}help${NC}                Show this help message
@@ -58,11 +64,10 @@ ${GREEN}EXAMPLES:${NC}
     agansible install
     agansible verify
     agansible test
-    agansible test --verbose
-    agansible test --playbook ping_test
+    agansible vault create group_vars/cisco-devices/vault.yml
+    agansible vault edit group_vars/cisco-devices/vault.yml
+    agansible vault encrypt-string 'secret' --name ansible_password
     agansible run playbooks/base/ping_test.yml
-    agansible run playbooks/system/curl_test.yml -e output_format=json
-    agansible list
 
 ${GREEN}For more information, see README.md${NC}
 EOF
@@ -182,6 +187,63 @@ cmd_list() {
     fi
 }
 
+# Vault command (delegates to ansible-vault)
+cmd_vault() {
+    if [ $# -lt 1 ]; then
+        echo -e "${RED}Error: vault subcommand required${NC}"
+        echo "Usage: agansible vault { create | edit | view | encrypt-string } [options] [file|string]"
+        echo "  create <file>         - ansible-vault create <file>"
+        echo "  edit <file>           - ansible-vault edit <file>"
+        echo "  view <file>           - ansible-vault view <file>"
+        echo "  encrypt-string [str] - ansible-vault encrypt_string [string] (pass --name 'var_name' for YAML)"
+        exit 1
+    fi
+    
+    local subcmd="$1"
+    shift
+    
+    if ! command -v ansible-vault &> /dev/null; then
+        echo -e "${RED}Error: ansible-vault not found. Run: agansible install${NC}"
+        exit 1
+    fi
+    
+    case "$subcmd" in
+        create)
+            if [ $# -lt 1 ]; then
+                echo -e "${RED}Error: file path required${NC}"
+                echo "Usage: agansible vault create <file>"
+                exit 1
+            fi
+            echo -e "${BLUE}Creating vault file (ansible-vault create)...${NC}"
+            ansible-vault create "$@"
+            ;;
+        edit)
+            if [ $# -lt 1 ]; then
+                echo -e "${RED}Error: file path required${NC}"
+                echo "Usage: agansible vault edit <file>"
+                exit 1
+            fi
+            ansible-vault edit "$@"
+            ;;
+        view)
+            if [ $# -lt 1 ]; then
+                echo -e "${RED}Error: file path required${NC}"
+                echo "Usage: agansible vault view <file>"
+                exit 1
+            fi
+            ansible-vault view "$@"
+            ;;
+        encrypt-string)
+            ansible-vault encrypt_string "$@"
+            ;;
+        *)
+            echo -e "${RED}Unknown vault subcommand: $subcmd${NC}"
+            echo "Use: create | edit | view | encrypt-string"
+            exit 1
+            ;;
+    esac
+}
+
 # Version command
 cmd_version() {
     echo "AGAnsible CLI Version: $VERSION"
@@ -222,6 +284,9 @@ main() {
             ;;
         list)
             cmd_list "$@"
+            ;;
+        vault)
+            cmd_vault "$@"
             ;;
         version)
             cmd_version "$@"

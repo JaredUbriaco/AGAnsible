@@ -105,8 +105,8 @@ fi
 echo ""
 echo "Checking documentation..."
 check_path "README.md" "README"
-check_path "HowTo.md" "HowTo guide"
-check_path "REQUIREMENTS.md" "Requirements documentation"
+check_path "docs/HowTo.md" "HowTo guide"
+check_path "docs/REQUIREMENTS.md" "Requirements documentation"
 
 # Test playbook execution (optional)
 echo ""

@@ -34,7 +34,7 @@ The AGAnsible suite provides:
 - **Comprehensive validation** - Success/failure detection for all tests
 - **Automatic logging** - Detailed actionlog files for every execution
 - **Ready-to-use playbooks** - Network, system, and connectivity tests
-- **Full documentation** - Complete guides for setup and usage (see **[HowTo.md](HowTo.md)** for a full walkthrough)
+- **Full documentation** - Complete guides for setup and usage (see **[docs/HowTo.md](docs/HowTo.md)** for a full walkthrough)
 
 <a id="prerequisites"></a>
 ## 📦 Prerequisites
@@ -98,7 +98,7 @@ Follow these steps in order for a complete setup from scratch.
      sudo apt-get upgrade -y
      ```
 
-**For detailed WSL setup instructions**, see **[WSL_SETUP.md](WSL_SETUP.md)**.
+**For detailed WSL setup instructions**, see **[docs/WSL_SETUP.md](docs/WSL_SETUP.md)**.
 
 **Linux users**: If you're already on Linux, proceed to Step 2.
 
@@ -194,41 +194,45 @@ ansible-playbook -i inventories/cisco.ini playbooks/cisco/ssh_test.yml
 ```
 AGAnsible/
 ├── README.md                    # This file - main documentation
-├── HowTo.md                     # Full verbose how-to walkthrough
-├── WSL_SETUP.md                 # Complete WSL setup guide (Windows)
-├── REQUIREMENTS.md              # System requirements and dependencies
-├── install.sh                   # Complete installation script
+├── docs/                        # Long-form documentation
+│   ├── HowTo.md                 # Full verbose how-to walkthrough
+│   ├── VAULT.md                 # Ansible Vault usage and setup
+│   ├── WSL_SETUP.md             # WSL setup guide (Windows)
+│   └── REQUIREMENTS.md          # System requirements and dependencies
+├── vault/                       # Vault template (vault.example.yml, readmevault.md)
+├── install.sh                   # Installation script
 ├── verify.sh                    # Verification script
 ├── test_all.sh                  # Test all playbooks
 ├── test_localhost.sh            # Test localhost-capable playbooks only
+├── agansible                    # CLI wrapper (ansible, vault, etc.)
 ├── ansible.cfg                  # Ansible configuration
+├── requirements.yml            # Ansible Galaxy collections
 │
-├── inventories/                 # The Trinity #1: WHERE (target hosts)
-│   └── localhost.ini           # Localhost inventory
+├── inventories/                 # WHERE: target hosts
+│   ├── localhost.ini
+│   └── example_*.ini            # Example inventories (Cisco, Juniper, etc.)
+├── playbooks/                   # WHAT: tasks and automation
+│   ├── base/                    # Agnostic (ping, etc.)
+│   ├── cisco/                   # Cisco-specific
+│   ├── system/                  # System tests (curl, dns, port_scan, ...)
+│   ├── network/                 # Network protocols (BGP, OSPF, MPLS, ...)
+│   ├── multi-vendor/            # Multi-vendor playbooks
+│   ├── topology/                # Topology discovery
+│   └── templates/               # Playbook template
+├── roles/                       # Reusable roles (common, validation)
+├── group_vars/                  # Group variables
+├── library/                     # Custom Ansible modules (e.g. network_topology.py)
+├── schemas/                     # JSON schemas for actionlog validation
+├── scripts/                     # Lint, actionlog helpers, topology viz
 │
-├── playbooks/                   # The Trinity #2: WHAT (tasks/automation)
-│   ├── base/                   # Agnostic tests (work on any system)
-│   │   └── ping_test.yml      # Ping connectivity test
-│   ├── cisco/                  # Cisco-specific playbooks
-│   │   └── ssh_test.yml       # SSH connectivity test
-│   └── system/                 # System-level tests
-│       ├── curl_test.yml      # HTTP/curl test
-│       ├── dns_test.yml       # DNS resolution test
-│       └── ...                # See playbooks/system/README.md for full list
-│
-├── roles/                       # Reusable Ansible roles (for future use)
-├── group_vars/                  # Variables for inventory groups
-├── host_vars/                   # Host-specific variables
-│
-└── actionlog/                   # Test results and logs (auto-created)
+└── actionlog/                   # Test results and logs (auto-created, mirrors playbooks/)
     ├── base/
-    │   └── ping_test/          # Ping test results
     ├── cisco/
-    │   └── ssh_test/           # SSH test results
-    └── system/
-        ├── curl_test/          # Curl test results
-        └── dns_test/           # DNS test results
+    ├── system/
+    └── ...
 ```
+
+**Organization:** Root keeps the main entry points (README, install/verify/test scripts, `agansible`, config). Long-form docs live in **docs/** so the root stays scannable. **Playbooks** are grouped by purpose (base, cisco, system, network, etc.). **actionlog/** mirrors the playbook layout for run output; **scripts/**, **schemas/**, and **library/** hold tooling and custom modules.
 
 <a id="the-trinity-of-ansible"></a>
 ## 🔺 The Trinity of Ansible
@@ -486,7 +490,7 @@ ansible_python_interpreter=/usr/bin/python3
 - Ensure you're running PowerShell as Administrator
 - Use: `wsl --install`
 - Restart Windows after installation
-- See [WSL_SETUP.md](WSL_SETUP.md) for detailed instructions
+- See [docs/WSL_SETUP.md](docs/WSL_SETUP.md) for detailed instructions
 
 ### Issue: "Ansible not found"
 **Solution:**
@@ -591,7 +595,7 @@ ansible-playbook playbooks/category/my_test.yml
 ## 🔐 Security Notes
 
 - **Passwords**: Never commit passwords or secrets to git
-- **Credentials**: Store in `group_vars/` or `host_vars/` (add to `.gitignore`)
+- **Credentials**: Store in encrypted vault files; see **[docs/VAULT.md](docs/VAULT.md)** for Ansible Vault setup
 - **SSH Keys**: Use SSH keys instead of passwords when possible
 - **Inventory**: Don't commit production inventories with sensitive data
 
@@ -599,11 +603,12 @@ ansible-playbook playbooks/category/my_test.yml
 ## 📚 Additional Resources
 
 ### Documentation Files
-- **[HowTo.md](HowTo.md)** - Full verbose how-to: setup, run tests, review results (start here for a complete walkthrough)
-- **[WSL_SETUP.md](WSL_SETUP.md)** - Complete WSL2 setup guide (Windows users)
-- **[REQUIREMENTS.md](REQUIREMENTS.md)** - System requirements and dependencies
+- **[docs/HowTo.md](docs/HowTo.md)** - Full verbose how-to: setup, run tests, review results (start here for a complete walkthrough)
+- **[docs/WSL_SETUP.md](docs/WSL_SETUP.md)** - Complete WSL2 setup guide (Windows users)
+- **[docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)** - System requirements and dependencies
+- **[docs/VAULT.md](docs/VAULT.md)** - Ansible Vault setup and usage for secrets
 
-**Optional:** Use the `agansible` CLI: `agansible install`, `agansible verify`, `agansible test` (run `agansible help`). To lint playbooks: `./scripts/lint.sh` or `pre-commit install` then `pre-commit run`.
+**Optional:** Use the `agansible` CLI: `agansible install`, `agansible verify`, `agansible test`, `agansible vault` (run `agansible help`). To lint playbooks: `./scripts/lint.sh` or `pre-commit install` then `pre-commit run`.
 
 ### External Resources
 - [Ansible Documentation](https://docs.ansible.com/)

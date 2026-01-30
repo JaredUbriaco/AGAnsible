@@ -12,6 +12,8 @@ actionlog/**/*.json
 group_vars/*/vault
 host_vars/*/vault
 *.vault
+vault/.vault_pass
+vault/.vault_password
 **/secrets.yml
 **/passwords.yml
 **/credentials.yml

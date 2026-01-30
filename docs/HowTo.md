@@ -16,6 +16,7 @@ This document provides full, step-by-step instructions for every phase of the AG
 8. [Phase 7: Reviewing Test Results (Actionlog)](#8-phase-7-reviewing-test-results-actionlog)
 9. [Phase 8: Running Multiple Tests](#9-phase-8-running-multiple-tests)
 10. [Phase 9: Custom Inventories and Extra Variables](#10-phase-9-custom-inventories-and-extra-variables)
+    - [Using Ansible Vault](#104-using-ansible-vault)
 11. [Phase 10: Output Formats (Text, JSON, Both)](#11-phase-10-output-formats-text-json-both)
 12. [Troubleshooting](#12-troubleshooting)
 13. [Quick Reference and Checklists](#13-quick-reference-and-checklists)
@@ -633,10 +634,90 @@ These require an inventory that points to real devices and often use `network_cl
 cp inventories/example_cisco.ini inventories/my_cisco.ini
 # Edit my_cisco.ini with your device IPs and credentials (use vault for secrets)
 
-ansible-playbook -i inventories/my_cisco.ini playbooks/cisco/ssh_test.yml
+# Store credentials in group_vars/cisco-devices/vault.yml (see VAULT.md), then:
+ansible-playbook -i inventories/my_cisco.ini playbooks/cisco/ssh_test.yml --ask-vault-pass
 ```
 
-See **inventories/example_cisco.ini** and **playbooks/cisco/ssh_test.yml** for structure and variables.
+See **inventories/example_cisco.ini**, **playbooks/cisco/ssh_test.yml**, and **[VAULT.md](VAULT.md)** for credentials and vault setup.
+
+### 10.4 Using Ansible Vault
+
+Use **Ansible Vault** when a playbook needs secrets (passwords, API keys)—for example when connecting to network devices or remote hosts. Localhost-only playbooks (ping, curl, DNS, etc.) do not need vault.
+
+#### When to use vault
+
+- Playbooks that target **Cisco or other network devices** (e.g. `playbooks/cisco/ssh_test.yml`, `playbooks/multi-vendor/config_backup.yml`).
+- Playbooks that target **remote servers** with password-based auth.
+- Any variables you do **not** want stored in plain text in the repo.
+
+#### Step 1: Create an encrypted vault file
+
+Create a vault file for an inventory group (e.g. `cisco-devices`):
+
+```bash
+mkdir -p group_vars/cisco-devices
+ansible-vault create group_vars/cisco-devices/vault.yml
+```
+
+You will be prompted for a **vault password**. Remember it; you need it whenever you run a playbook that uses this vault. In the editor, add variables such as:
+
+```yaml
+ansible_user: admin
+ansible_password: your_ssh_password
+ansible_become: yes
+ansible_become_method: enable
+ansible_become_password: your_enable_password
+```
+
+Save and exit. The file is encrypted. `.gitignore` already excludes `group_vars/*/vault`, so it will not be committed.
+
+You can use the **agansible** CLI instead:
+
+```bash
+agansible vault create group_vars/cisco-devices/vault.yml
+```
+
+#### Step 2: Run a playbook that uses the vault
+
+Pass the vault password so Ansible can decrypt the file:
+
+```bash
+ansible-playbook -i inventories/my_cisco.ini playbooks/cisco/ssh_test.yml --ask-vault-pass
+```
+
+Enter the vault password when prompted. Ansible loads `group_vars/cisco-devices/vault.yml` automatically for hosts in the `cisco-devices` group.
+
+#### Step 3 (optional): Use a vault password file
+
+To avoid typing the password each time (e.g. for automation):
+
+```bash
+# Create a password file (do not commit it)
+echo 'your_vault_password' > vault/.vault_pass
+chmod 600 vault/.vault_pass
+```
+
+The path `vault/.vault_pass` is in `.gitignore`. Then run:
+
+```bash
+ansible-playbook -i inventories/my_cisco.ini playbooks/cisco/ssh_test.yml --vault-password-file vault/.vault_pass
+```
+
+#### Common vault commands
+
+| What you want to do | Command |
+|---------------------|--------|
+| Create new encrypted vault | `ansible-vault create group_vars/<group>/vault.yml` or `agansible vault create group_vars/<group>/vault.yml` |
+| Edit existing vault | `ansible-vault edit group_vars/<group>/vault.yml` or `agansible vault edit ...` |
+| View decrypted contents | `ansible-vault view group_vars/<group>/vault.yml` or `agansible vault view ...` |
+| Encrypt a single string (for pasting into YAML) | `ansible-vault encrypt_string 'secret' --name 'ansible_password'` or `agansible vault encrypt-string 'secret' --name ansible_password` |
+
+#### Where to put vault files
+
+- **By group:** `group_vars/<group>/vault.yml` (e.g. `group_vars/cisco-devices/vault.yml`). Used for all hosts in that group.
+- **By host:** `host_vars/<hostname>/vault.yml`. Used for a single host.
+
+For more detail and security notes, see **[VAULT.md](VAULT.md)** and **vault/readmevault.md**.
 
 ---
 
@@ -807,9 +888,10 @@ cd ~ && git clone https://github.com/JaredUbriaco/AGAnsible.git && cd AGAnsible 
 
 | Document | Purpose |
 |----------|---------|
-| **[README.md](README.md)** | Project overview, table of contents, and main links. |
+| **[../README.md](../README.md)** | Project overview, table of contents, and main links. |
 | **[WSL_SETUP.md](WSL_SETUP.md)** | Detailed WSL2 setup for Windows. |
 | **[REQUIREMENTS.md](REQUIREMENTS.md)** | System requirements and dependencies. |
+| **[VAULT.md](VAULT.md)** | Ansible Vault setup and usage for secrets. |
 
 ---
 
