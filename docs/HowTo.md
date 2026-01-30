@@ -18,6 +18,7 @@ This document provides full, step-by-step instructions for every phase of the AG
 10. [Phase 9: Custom Inventories and Extra Variables](#10-phase-9-custom-inventories-and-extra-variables)
     - [Using Ansible Vault](#104-using-ansible-vault)
 11. [Phase 10: Output Formats (Text, JSON, Both)](#11-phase-10-output-formats-text-json-both)
+    - [Network Topology Discovery](#116-network-topology-discovery)
 12. [Troubleshooting](#12-troubleshooting)
 13. [Quick Reference and Checklists](#13-quick-reference-and-checklists)
 
@@ -771,6 +772,24 @@ If you have `jq` installed:
 ls -t actionlog/base/ping_test/*.json 2>/dev/null | head -1 | xargs jq .
 ```
 
+### 11.6 Network Topology Discovery
+
+To discover network topology using CDP/LLDP and visualize it:
+
+1. **Run the discovery playbook** (requires network devices with CDP/LLDP and an inventory with `network_devices`):
+   ```bash
+   ansible-playbook -i inventories/example_cisco.ini playbooks/topology/discover_topology.yml
+   ```
+2. **Visualize** (from project root): text summary, SVG (no extra deps), DOT, or PNG:
+   ```bash
+   python3 scripts/visualize_topology.py topology text
+   python3 scripts/visualize_topology.py topology svg
+   python3 scripts/visualize_topology.py topology png   # requires networkx + matplotlib
+   ```
+   Diagrams show Core <> Access <> Access ordering, interface labels on links, and brand/platform on nodes when present in the JSON.
+
+See **[../playbooks/topology/TOPOLOGY_README.md](../playbooks/topology/TOPOLOGY_README.md)** for the full flow (CDP/LLDP → module → JSON → visualization) and **[../topology/TOPOLOGY_EXAMPLE_README.md](../topology/TOPOLOGY_EXAMPLE_README.md)** for the example topology.
+
 ---
 
 ## 12. Troubleshooting
@@ -892,6 +911,8 @@ cd ~ && git clone https://github.com/JaredUbriaco/AGAnsible.git && cd AGAnsible 
 | **[WSL_SETUP.md](WSL_SETUP.md)** | Detailed WSL2 setup for Windows. |
 | **[REQUIREMENTS.md](REQUIREMENTS.md)** | System requirements and dependencies. |
 | **[VAULT.md](VAULT.md)** | Ansible Vault setup and usage for secrets. |
+| **[../playbooks/topology/TOPOLOGY_README.md](../playbooks/topology/TOPOLOGY_README.md)** | Topology discovery (CDP/LLDP), module, visualization flow. |
+| **[../topology/TOPOLOGY_EXAMPLE_README.md](../topology/TOPOLOGY_EXAMPLE_README.md)** | Example topology (Core <> Access <> Access) and SVG/PNG generation. |
 
 ---
 

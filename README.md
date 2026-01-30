@@ -17,6 +17,7 @@ A comprehensive Ansible automation suite for network and system testing, auditin
 - [Playbook Categories](#playbook-categories)
 - [Usage Examples](#usage-examples)
 - [Actionlog System](#actionlog-system)
+- [Network Topology Discovery](#network-topology-discovery)
 - [Testing](#testing)
 - [Configuration](#configuration)
 - [Troubleshooting](#troubleshooting)
@@ -30,10 +31,11 @@ A comprehensive Ansible automation suite for network and system testing, auditin
 
 The AGAnsible suite provides:
 - **Complete WSL environment setup** - Automated setup from scratch
-- **Organized playbook structure** - Categorized by type (base, cisco, system)
+- **Organized playbook structure** - Categorized by type (base, cisco, system, network, topology)
 - **Comprehensive validation** - Success/failure detection for all tests
 - **Automatic logging** - Detailed actionlog files for every execution
-- **Ready-to-use playbooks** - Network, system, and connectivity tests
+- **Ready-to-use playbooks** - Network, system, connectivity, and topology discovery (CDP/LLDP)
+- **Topology discovery and visualization** - Discover neighbors via CDP/LLDP, export to JSON, generate SVG/PNG with interface labels and brand
 - **Full documentation** - Complete guides for setup and usage (see **[docs/HowTo.md](docs/HowTo.md)** for a full walkthrough)
 
 <a id="prerequisites"></a>
@@ -224,7 +226,8 @@ AGAnsible/
 ├── group_vars/                  # Group variables
 ├── library/                     # Custom Ansible modules (e.g. network_topology.py)
 ├── schemas/                     # JSON schemas for actionlog validation
-├── scripts/                     # Lint, actionlog helpers, topology viz
+├── scripts/                     # Lint, actionlog helpers, visualize_topology.py
+├── topology/                    # Topology JSON output and example (from discover_topology playbook)
 │
 └── actionlog/                   # Test results and logs (auto-created, mirrors playbooks/)
     ├── base/
@@ -233,7 +236,7 @@ AGAnsible/
     └── ...
 ```
 
-**Organization:** Root keeps the main entry points (README, install/verify/test scripts, `agansible`, config). Long-form docs live in **docs/** so the root stays scannable. **Playbooks** are grouped by purpose (base, cisco, system, network, etc.). **actionlog/** mirrors the playbook layout for run output; **scripts/**, **schemas/**, and **library/** hold tooling and custom modules.
+**Organization:** Root keeps the main entry points (README, install/verify/test scripts, `agansible`, config). Long-form docs live in **docs/** so the root stays scannable. **Playbooks** are grouped by purpose (base, cisco, system, network, topology, etc.). **actionlog/** mirrors the playbook layout for run output; **topology/** holds topology JSON and example diagrams; **scripts/**, **schemas/**, and **library/** hold tooling and custom modules.
 
 <a id="the-trinity-of-ansible"></a>
 ## 🔺 The Trinity of Ansible
@@ -294,6 +297,13 @@ Inventory → Playbook → Modules → Execution
 - **Requires**: Specific OS tools (curl, dnsutils, etc.)
 - **Current playbooks**: `curl_test.yml`, `dns_test.yml`, `port_scan.yml`, `network_interfaces.yml`, `ssl_cert_check.yml`, `firewall_check.yml`, `network_stats.yml`, `traceroute_test.yml`
 
+### `topology/` - Topology Discovery
+- **Purpose**: Discover network topology using CDP/LLDP neighbor information
+- **Examples**: Run on Cisco IOS (CDP/LLDP), Juniper JunOS (LLDP), Arista EOS (LLDP); export JSON; visualize with interface labels and brand
+- **Requires**: Network devices with CDP/LLDP enabled, Ansible network collections
+- **Current playbooks**: `discover_topology.yml`
+- **Output**: JSON files in `topology/`; then run `scripts/visualize_topology.py` for SVG/PNG/DOT/text. See **[playbooks/topology/TOPOLOGY_README.md](playbooks/topology/TOPOLOGY_README.md)** for the full flow.
+
 <a id="usage-examples"></a>
 ## 💡 Usage Examples
 
@@ -333,7 +343,18 @@ ansible-playbook playbooks/system/dns_test.yml
 # - Shows SUCCESS/FAILURE status
 ```
 
-### Example 4: Custom Inventory
+### Example 4: Topology Discovery (CDP/LLDP)
+```bash
+# Discover topology from network devices (Cisco/Juniper/Arista)
+ansible-playbook -i inventories/example_cisco.ini playbooks/topology/discover_topology.yml
+
+# Visualize (text summary, or SVG/PNG)
+python3 scripts/visualize_topology.py topology text
+python3 scripts/visualize_topology.py topology svg
+# Open topology/topology.svg in a browser
+```
+
+### Example 5: Custom Inventory
 ```bash
 # Create custom inventory
 cat > inventories/myhosts.ini << EOF
@@ -369,9 +390,40 @@ ls -t actionlog/system/curl_test/*.txt | head -1 | xargs cat
 # View latest DNS test result
 ls -t actionlog/system/dns_test/*.txt | head -1 | xargs cat
 
+# List latest topology discovery result
+ls -t actionlog/topology/discover_topology/*.txt 2>/dev/null | head -1 | xargs cat
+
 # List all test results
 ls -lth actionlog/base/ping_test/
 ```
+
+<a id="network-topology-discovery"></a>
+## 🌐 Network Topology Discovery
+
+The suite can discover network topology using CDP (Cisco) or LLDP, export structured JSON, and visualize it with interface labels and brand (e.g. Cisco IOS) on each node.
+
+### Flow
+
+1. **Run the discovery playbook** (requires network devices with CDP/LLDP enabled and inventory with `network_devices`):
+   ```bash
+   ansible-playbook -i inventories/example_cisco.ini playbooks/topology/discover_topology.yml
+   ```
+2. **Output**: Each device writes `topology/<host>_<timestamp>.json` with `device`, `protocol`, `neighbor_count`, `neighbors` (device_id, local_interface, remote_interface, platform), and device-level `platform` for visualization.
+3. **Visualize** (from project root):
+   ```bash
+   python3 scripts/visualize_topology.py topology text   # Summary to terminal
+   python3 scripts/visualize_topology.py topology svg    # SVG diagram (no extra deps)
+   python3 scripts/visualize_topology.py topology dot   # GraphViz DOT; then: dot -Tpng topology/topology.dot -o topology.png
+   python3 scripts/visualize_topology.py topology png    # PNG (requires networkx + matplotlib)
+   ```
+   Diagrams show **Core <> Access <> Access** (daisy chain) ordering when device names follow that pattern, **interface labels** on each link (e.g. Gi0/1 ↔ Gi0/1), and **brand/platform** on each node when present in the JSON.
+
+### Custom module and example
+
+- **Module**: `library/network_topology.py` parses `show cdp neighbors detail` / `show lldp neighbors detail` and returns structured topology.
+- **Example**: `topology/` contains sample JSON (core-sw1, access-sw1, access-sw2) and a reference diagram; see **[topology/TOPOLOGY_EXAMPLE_README.md](topology/TOPOLOGY_EXAMPLE_README.md)**.
+
+**Full details**: **[playbooks/topology/TOPOLOGY_README.md](playbooks/topology/TOPOLOGY_README.md)** — validation flow (CDP/LLDP → playbook → module → JSON → visualization), supported devices, and troubleshooting.
 
 ### Actionlog File Format
 
@@ -614,6 +666,8 @@ ansible-playbook playbooks/category/my_test.yml
 - **[docs/WSL_SETUP.md](docs/WSL_SETUP.md)** - Complete WSL2 setup guide (Windows users)
 - **[docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)** - System requirements and dependencies
 - **[docs/VAULT.md](docs/VAULT.md)** - Ansible Vault setup and usage for secrets
+- **[playbooks/topology/TOPOLOGY_README.md](playbooks/topology/TOPOLOGY_README.md)** - Topology discovery (CDP/LLDP), module, visualization flow, and validation
+- **[topology/TOPOLOGY_EXAMPLE_README.md](topology/TOPOLOGY_EXAMPLE_README.md)** - Example topology (Core <> Access <> Access) and how to generate SVG/PNG
 
 **Optional:** Use the `agansible` CLI: `agansible install`, `agansible verify`, `agansible menu` (interactive pick-one menu), `agansible test`, `agansible vault` (run `agansible help`). To lint playbooks: `./scripts/lint.sh` or `pre-commit install` then `pre-commit run`.
 
