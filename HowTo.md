@@ -766,7 +766,7 @@ ls -t actionlog/base/ping_test/*.json 2>/dev/null | head -1 | xargs jq .
   ```bash
   ansible-playbook --syntax-check playbooks/base/ping_test.yml
   ```
-  Fix the reported line and try again. See **[LINTING.md](LINTING.md)** for linting and style.
+  Fix the reported line and try again. To lint: `./scripts/lint.sh` or `pre-commit run`.
 
 ---
 
@@ -810,10 +810,6 @@ cd ~ && git clone https://github.com/JaredUbriaco/AGAnsible.git && cd AGAnsible 
 | **[README.md](README.md)** | Project overview, table of contents, and main links. |
 | **[WSL_SETUP.md](WSL_SETUP.md)** | Detailed WSL2 setup for Windows. |
 | **[REQUIREMENTS.md](REQUIREMENTS.md)** | System requirements and dependencies. |
-| **[LOCALHOST_TESTS.md](LOCALHOST_TESTS.md)** | Localhost playbooks and `test_localhost.sh` usage. |
-| **[LINTING.md](LINTING.md)** | Linting and code quality. |
-| **[ACTIONLOG_SYSTEM_REVIEW.md](ACTIONLOG_SYSTEM_REVIEW.md)** | Actionlog system reference. |
-| **[CLI_USAGE.md](CLI_USAGE.md)** | `agansible` CLI reference. |
 
 ---
 

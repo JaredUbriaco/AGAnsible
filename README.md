@@ -197,10 +197,6 @@ AGAnsible/
 ├── HowTo.md                     # Full verbose how-to walkthrough
 ├── WSL_SETUP.md                 # Complete WSL setup guide (Windows)
 ├── REQUIREMENTS.md              # System requirements and dependencies
-├── LOCALHOST_TESTS.md           # Localhost playbooks and test_localhost.sh
-├── LINTING.md                   # Linting and code quality
-├── ACTIONLOG_SYSTEM_REVIEW.md   # Actionlog system reference
-├── CLI_USAGE.md                 # agansible CLI reference
 ├── install.sh                   # Complete installation script
 ├── verify.sh                    # Verification script
 ├── test_all.sh                  # Test all playbooks
@@ -291,7 +287,7 @@ Inventory → Playbook → Modules → Execution
 - **Purpose**: Target operating system features
 - **Examples**: Curl tests, DNS tests, port scan, network interfaces, SSL cert check
 - **Requires**: Specific OS tools (curl, dnsutils, etc.)
-- **Current playbooks**: `curl_test.yml`, `dns_test.yml`, `port_scan.yml`, `network_interfaces.yml`, `ssl_cert_check.yml`, `firewall_check.yml`, `network_stats.yml`, `traceroute_test.yml` (see [LOCALHOST_TESTS.md](LOCALHOST_TESTS.md))
+- **Current playbooks**: `curl_test.yml`, `dns_test.yml`, `port_scan.yml`, `network_interfaces.yml`, `ssl_cert_check.yml`, `firewall_check.yml`, `network_stats.yml`, `traceroute_test.yml`
 
 <a id="usage-examples"></a>
 ## 💡 Usage Examples
@@ -388,8 +384,6 @@ Each file contains:
 - **Validation**: PASS/FAIL for each check
 - **Full Output**: Complete command/response data
 
-For a full review of the actionlog system (coverage, scripts, schemas), see **[ACTIONLOG_SYSTEM_REVIEW.md](ACTIONLOG_SYSTEM_REVIEW.md)**.
-
 <a id="testing"></a>
 ## 🧪 Testing
 
@@ -456,10 +450,6 @@ ansible-playbook playbooks/system/curl_test.yml
 # Test DNS
 ansible-playbook playbooks/system/dns_test.yml
 ```
-
-### Testing Resources
-
-- **[LOCALHOST_TESTS.md](LOCALHOST_TESTS.md)** - Localhost playbooks and `test_localhost.sh` usage
 
 <a id="configuration"></a>
 ## 🔧 Configuration
@@ -612,10 +602,8 @@ ansible-playbook playbooks/category/my_test.yml
 - **[HowTo.md](HowTo.md)** - Full verbose how-to: setup, run tests, review results (start here for a complete walkthrough)
 - **[WSL_SETUP.md](WSL_SETUP.md)** - Complete WSL2 setup guide (Windows users)
 - **[REQUIREMENTS.md](REQUIREMENTS.md)** - System requirements and dependencies
-- **[LOCALHOST_TESTS.md](LOCALHOST_TESTS.md)** - Localhost playbooks and `test_localhost.sh` usage
-- **[LINTING.md](LINTING.md)** - Linting and code quality
-- **[ACTIONLOG_SYSTEM_REVIEW.md](ACTIONLOG_SYSTEM_REVIEW.md)** - Actionlog system reference
-- **[CLI_USAGE.md](CLI_USAGE.md)** - `agansible` CLI reference
+
+**Optional:** Use the `agansible` CLI: `agansible install`, `agansible verify`, `agansible test` (run `agansible help`). To lint playbooks: `./scripts/lint.sh` or `pre-commit install` then `pre-commit run`.
 
 ### External Resources
 - [Ansible Documentation](https://docs.ansible.com/)
